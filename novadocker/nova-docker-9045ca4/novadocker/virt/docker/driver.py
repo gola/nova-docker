@@ -290,7 +290,7 @@ class DockerDriver(driver.ComputeDriver):
         if not image:
             image = self._pull_missing_image(context, image_meta, instance)
             self.docker.tag(image_id, image_name)
-        if not (image and image['ContainerConfig']['Cmd']):
+        if not (image and image['Config']['Cmd']):
             args['Cmd'] = ['sh']
         # Glance command-line overrides any set in the Docker image
         if (image_meta and
