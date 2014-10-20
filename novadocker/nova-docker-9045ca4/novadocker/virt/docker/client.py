@@ -276,3 +276,15 @@ class DockerHTTPClient(object):
     def ping(self):
         resp = self.make_request('GET', '_ping')
         return (resp.code == 200)
+
+    #Add by Mars Gu - 2014-10-21.
+    def tag(self,image_id,image_name):
+        default_tag = (':' not in image_name)
+        image_name = image_name if not default_tag else image_name + ':latest'
+        resp = self.make_request(
+            'POST',
+            'images/{0}/tag'.format(image_id),
+            ('repo', image_name.split(":")[0]),
+            ('force', '0'),
+            ('tag', image_name.split(":")[1]))
+        return (resp.code == 201)
