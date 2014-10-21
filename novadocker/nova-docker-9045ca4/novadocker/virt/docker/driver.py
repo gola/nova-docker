@@ -276,7 +276,19 @@ class DockerDriver(driver.ComputeDriver):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         self.log_dict(image_meta)
+
         image_name = self._get_image_name(context, instance, image_meta)
+        if (image_meta and image_meta.get('properties', {}).get('docker_image_type')):
+            image_type = image_meta['properties'].get('docker_image_type')
+        else:
+            image_type = "repository"
+        LOG.debug('docker_image_type is "%s".' % image_type)
+
+        if image_type == "image":
+            # image_meta_uuid= unicode(image_meta['id']).encode('utf-8')
+            image_meta_uuid = image_meta['id']
+            image_id = image_meta_uuid[0:8] + image_meta_uuid[9:13]
+
         args = {
             'Hostname': instance['name'],
             'Image': image_name,
@@ -286,11 +298,11 @@ class DockerDriver(driver.ComputeDriver):
         }
 
         image = self.docker.inspect_image(image_name)
-        image_id = unicode(image['Id']).encode('utf-8')
 
         if not image:
             image = self._pull_missing_image(context, image_meta, instance)
-            self.docker.tag(image_id, image_name)
+            if image_type == "image":
+                self.docker.tag(image_id, image_name)
         if not (image and image['Config']['Cmd']):
             args['Cmd'] = ['sh']
         # Glance command-line overrides any set in the Docker image
