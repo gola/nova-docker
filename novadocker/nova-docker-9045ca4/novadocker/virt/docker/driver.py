@@ -275,6 +275,7 @@ class DockerDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
+        self.log_dict(image_meta)
         image_name = self._get_image_name(context, instance, image_meta)
         args = {
             'Hostname': instance['name'],
@@ -482,3 +483,7 @@ class DockerDriver(driver.ComputeDriver):
 
     def get_host_uptime(self, host):
         return hostutils.sys_uptime()
+
+    def log_dict(self, d):
+        for k,v in d.iteritems():
+            LOG.debug("%s : %s" % (k,v))
