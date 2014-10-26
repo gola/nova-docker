@@ -14,10 +14,15 @@
 #    under the License.
 
 import os
+from oslo.config import cfg
 
+CONF = cfg.CONF
+CONF.import_opt('instances_path', 'nova.compute.manager')
 
 def statvfs():
-    docker_path = '/var/lib/docker'
+    #docker_path = '/var/lib/docker'
+    docker_path = CONF.instances_path
+    
     if not os.path.exists(docker_path):
         docker_path = '/'
     return os.statvfs(docker_path)
