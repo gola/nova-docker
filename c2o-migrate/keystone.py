@@ -80,9 +80,27 @@ class OpenstackManager():
         for i in range(len(role_list)):
             if role_list[i].__dict__['name'] == role_name :
                 return role_list[i].__dict__['id']
+    #####################################################################
+    # just for glance and neutron now.  
+    def _get_endpoint(self):
+        service_list = self.client.services.list()
+        for i in range(len(service_list)):
+            if service_list[i].type == "image":
+                glance_id = service_list[i].id
+        if glance_id == None:
+            return
+
+        endpoint_list = self.client.endpoints.list()
+        for j in range(len(endpoint_list)):
+            if endpoint_list[j].service_id == glance_id:
+                self.glance_endpoint = endpoint_list[j].publicurl
+                         
+
         
 
 if __name__ == '__main__':
-    openstack = OpenstackManager("0s4c10ud", "http://10.27.2.1:35357/v2.0")
+    keystone = OpenstackManager("0s4c10ud", "http://10.27.2.1:35357/v2.0")
 
 
+    keystone._get_endpoint()
+    print keystone.glance_endpoint
