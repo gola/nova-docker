@@ -53,7 +53,9 @@ docker_opts = [
     cfg.StrOpt('snapshots_directory',
                default='$instances_path/snapshots',
                help='Location where docker driver will temporarily store '
-                    'snapshots.')
+                    'snapshots.'),
+    cfg.StrOpt('docker_allocation_ratio',
+               default=5)
 ]
 
 CONF.register_opts(docker_opts, 'docker')
@@ -186,10 +188,10 @@ class DockerDriver(driver.ComputeDriver):
 
         memory = hostinfo.get_memory_usage()
         disk = hostinfo.get_disk_usage()
-        vcpu_total = hostinfo.get_cpu_info() * CONF.docker.docker_allocation_ratio
+        vcpu_total = hostinfo.get_cpu_info() * int(CONF.docker.docker_allocation_ratio)
 
         stats = {
-            'vcpus': vcpu_total,
+            'vcpus': int(vcpu_total),
             'vcpus_used': 0,
             'memory_mb': memory['total'] / units.Mi,
             'memory_mb_used': memory['used'] / units.Mi,
