@@ -55,6 +55,14 @@ def get_memory_usage():
         'used': (total - avail) * 1024
     }
 
+def get_cpu_info():
+    with open('/proc/cpuinfo') as f:
+       pcpu_total = 0
+       m = f.read().split()
+       for i in range(len(m)):
+           if m[i] == 'processor':
+               pcpu_total = pcpu_total + 1
+    return pcpu_total if pcpu_total > 1 else 1
 
 def get_mounts():
     with open('/proc/mounts') as f:
