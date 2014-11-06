@@ -94,6 +94,18 @@ spice_status() {
     fi
 }
 
+spice_monitor(){
+    local processor_num=`ps -ef | grep /usr/bin/nova-consoleauth | grep -v 'grep' | wc -l`
+    if [ $processor_num -gt 1 ]; then
+        local processor_list=`ps -eo pid,cmd | grep /usr/bin/nova-consoleauth | grep -v 'grep' | cut -d' ' -f1`
+        for processor in $processor_list; do kill -9 $processor ; done
+        return $OCF_NOT_RUNNING
+    fi
+
+    ret=`spice_status`
+    return $ret
+}
+
 case $__OCF_ACTION in
 meta-data)	meta_data
 		# OCF variables are not set when querying meta-data
@@ -104,7 +116,8 @@ usage|help)	spice_usage
 		;;
 start)		spice_start;;
 stop)		spice_stop;;
-status|monitor)	spice_status;;
+status)	        spice_status;;
+monitor)	spice_monitor;;
 reload)		ocf_log info "Reloading..."
 	        spice_start
 		;;
