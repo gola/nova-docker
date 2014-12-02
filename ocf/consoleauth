@@ -97,7 +97,7 @@ spice_status() {
 spice_monitor(){
     local processor_num=`ps -ef | grep /usr/bin/nova-consoleauth | grep -v 'grep' | wc -l`
     if [ $processor_num -gt 1 ]; then
-        local processor_list=`ps -eo pid,cmd | grep /usr/bin/nova-consoleauth | grep -v 'grep' | cut -d' ' -f1`
+        local processor_list=`ps -eo pid,cmd | grep /usr/bin/nova-consoleauth | grep -v 'grep' | cut -d'/' -f1`
         for processor in $processor_list; do kill -9 $processor ; done
         return $OCF_NOT_RUNNING
     fi
