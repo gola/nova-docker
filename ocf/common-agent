@@ -56,18 +56,18 @@ pro_start() {
     pro_status
     status=$?
     if [ $status -eq $OCF_SUCCESS ]; then
-	ocf_log debug "${$OCF_RESKEY_pro_name}	already started."
+	ocf_log debug "${OCF_RESKEY_pro_name}	already started."
 	return $OCF_SUCCESS
     fi
 
-    /etc/init.d/${$OCF_RESKEY_pro_name} start >/dev/null 2>&1
+    /etc/init.d/${OCF_RESKEY_pro_name} start >/dev/null 2>&1
     ret=$?
     if [ $ret -eq 0 ]; then
-	ocf_log info "started ${$OCF_RESKEY_pro_name} successed."
+	ocf_log info "started ${OCF_RESKEY_pro_name} successed."
 	return $OCF_SUCCESS
     else
         return $OCF_ERR_GENERIC
-	ocf_log error "start ${$OCF_RESKEY_pro_name} failed."
+	ocf_log error "start ${OCF_RESKEY_pro_name} failed."
     fi
 }
 
@@ -77,17 +77,17 @@ pro_stop() {
     status=$?
     case $status in
 	$OCF_SUCCESS)
-            /etc/init.d/${$OCF_RESKEY_pro_name} stop >/dev/null 2>&1  
+            /etc/init.d/${OCF_RESKEY_pro_name} stop >/dev/null 2>&1  
             if [ $? -eq 0 ]; then
-		ocf_log info "stop ${$OCF_RESKEY_pro_name} successed"
+		ocf_log info "stop ${OCF_RESKEY_pro_name} successed"
 		return $OCF_SUCCESS
 	    else
-		ocf_log error "stop ${$OCF_RESKEY_pro_name} failed."
+		ocf_log error "stop ${OCF_RESKEY_pro_name} failed."
                 return $OCF_ERR_GENERIC
 	    fi
 	    ;;
 	$OCF_NOT_RUNNING)
-	    ocf_log debug "${$OCF_RESKEY_pro_name} already stopped."
+	    ocf_log debug "${OCF_RESKEY_pro_name} already stopped."
 	    return $OCF_SUCCESS
 	    ;;
     esac
@@ -95,7 +95,7 @@ pro_stop() {
 }
 
 pro_status() {
-    /etc/init.d/${$OCF_RESKEY_pro_name} status > /dev/null 2>&1
+    /etc/init.d/${OCF_RESKEY_pro_name} status > /dev/null 2>&1
     if [ $? -eq 0 ]; then
 	return $OCF_SUCCESS
     else
