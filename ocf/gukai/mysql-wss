@@ -796,7 +796,7 @@ rebuild_cluster() {
 
                 if [ "$RAISED_MASTER" = "(null)" ]; then 
                    if [ "$WINNER_NODE" = "$(hostname)" ] ; then
-                       crm_attribute -t crm_config --name mysqlmaster --update $RAISED_MASTER
+                       crm_attribute -t crm_config --name mysqlmaster --update $WINNER_NODE
                        #sleep and read again.
                        sleep 2
                        RAISED_MASTER=$(crm_attribute -t crm_config --name mysqlmaster --query 2> /dev/null | awk -F\= '{print $4}')
