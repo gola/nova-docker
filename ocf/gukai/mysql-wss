@@ -794,9 +794,16 @@ rebuild_cluster() {
                 # Check if someone already decided to declare himself master...
                 RAISED_MASTER=$(crm_attribute -t crm_config --name mysqlmaster --query 2> /dev/null | awk -F\= '{print $4}')
 
-                if [ "$RAISED_MASTER" != '1' ]; then 
+                if [ "$RAISED_MASTER" = "(null)" ]; then 
                    if [ "$WINNER_NODE" = "$(hostname)" ] ; then
-                       crm_attribute -t crm_config --name mysqlmaster --update 1
+                       crm_attribute -t crm_config --name mysqlmaster --update $RAISED_MASTER
+                       #sleep and read again.
+                       sleep 2
+                       RAISED_MASTER=$(crm_attribute -t crm_config --name mysqlmaster --query 2> /dev/null | awk -F\= '{print $4}')
+                       if [ "$RAISED_MASTER" != "$(hostname)" ]; then
+                           ocf_log info "Other Node read the Pacemaker mysqlmaster Mark as null at the same time, modify it behind me, he wiil be the master, I am quiet."
+                           return $OCF_SUCCESS
+                       fi  
                        ocf_log info "Assuming current node as a new master..."
                        mysql_stop
                        ${OCF_RESKEY_binary} \
