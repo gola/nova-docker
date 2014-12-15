@@ -794,7 +794,7 @@ rebuild_cluster() {
                 # Check if someone already decided to declare himself master...
                 RAISED_MASTER=$(crm_attribute -t crm_config --name mysqlmaster --query 2> /dev/null | awk -F\= '{print $4}')
                 
-                if [ "$RAISED_MASTER" = "(null)" ]; then 
+                if [ "$RAISED_MASTER" = "(null)" -o  "$RAISED_MASTER" = "$(hostname)" ]; then 
                    if [ "$WINNER_NODE" = "$(hostname)" ] ; then
                        crm_attribute -t crm_config --name mysqlmaster --update $WINNER_NODE
                        # sleep and read again.
