@@ -190,6 +190,7 @@ class DockerGenericVIFDriver(object):
         if_remote_name = 'ns%s' % vif['id'][:11]
         gateway = network.find_gateway(instance, vif['network'])
         ip = network.find_fixed_ip(instance, vif['network'])
+        dhcp_server = network.find_dhcp_server(instance, vif['network'])
 
         LOG.debug('attach vif_type=%(vif_type)s instance=%(instance)s '
                   'vif=%(vif)s',
@@ -207,5 +208,7 @@ class DockerGenericVIFDriver(object):
             utils.execute('ip', 'netns', 'exec', container_id,
                           'ip', 'route', 'replace', 'default', 'via',
                           gateway, 'dev', if_remote_name, run_as_root=True)
+            utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'route', 'add',
+                          '169.254.169.254/32', 'via', dhcp_server)
         except Exception:
             LOG.exception("Failed to attach vif")

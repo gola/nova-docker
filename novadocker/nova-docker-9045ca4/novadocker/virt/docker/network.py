@@ -56,3 +56,10 @@ def find_gateway(instance, network_info):
 # linux_net code in nova.
 def get_ovs_interfaceid(vif):
     return vif.get('ovs_interfaceid') or vif['id']
+
+#Mars gu - add this host route for cloudinit.
+def find_dhcp_server(instance, network_info):
+    for subnet in network_info['subnets']:
+        return subnet['meta']['dhcp_server']
+    raise exception.InstanceDeployFailure(_('Cannot find DHCP Server'),
+                                          instance_id=instance['uuid'])
