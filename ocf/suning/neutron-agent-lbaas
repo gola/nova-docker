@@ -24,7 +24,7 @@
 #######################################################################
 # Initialization:
 OCF_ROOT=${OCF_ROOT:-/usr/lib/ocf}
-NSCMD="ip netns exec haproxy"
+NSCMD="ip netns exec"
 HANSCMD="$NSCMD haproxy"
 : ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
 . ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
