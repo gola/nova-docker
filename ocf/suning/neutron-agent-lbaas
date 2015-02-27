@@ -24,6 +24,8 @@
 #######################################################################
 # Initialization:
 OCF_ROOT=${OCF_ROOT:-/usr/lib/ocf}
+NSCMD="ip netns exec haproxy"
+HANSCMD="$NSCMD haproxy"
 : ${OCF_FUNCTIONS_DIR=${OCF_ROOT}/lib/heartbeat}
 . ${OCF_FUNCTIONS_DIR}/ocf-shellfuncs
 
@@ -269,6 +271,14 @@ neutron_lbaas_agent_monitor() {
     #network_amqp_check=`netstat -punt | grep -s "$OCF_RESKEY_amqp_server_port" | grep -s "$pid" | grep -qs "ESTABLISHED"`
     network_amqp_check=`netstat -anpl | grep -s "$OCF_RESKEY_amqp_server_port" | grep "haproxy"`
     rc=$?
+    if [ $rc -ne 0 ]; then
+        ns_used=`ip netns list | grep "haproxy"`
+        if [ -n "$ns_used" ]; then
+           network_amqp_check=`$HANSCMD netstat -anpl | grep -s "$OCF_RESKEY_amqp_server_port" | grep "haproxy"`
+           rc=$?
+        fi
+    fi
+
     if [ $rc -ne 0 ]; then
         ocf_log err "Neutron LBAAS Server is not connected to the AMQP server : $rc"
 	return $OCF_NOT_RUNNING
