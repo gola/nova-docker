@@ -280,8 +280,9 @@ neutron_lbaas_agent_monitor() {
     fi
 
     if [ $rc -ne 0 ]; then
-        ocf_log err "Neutron LBAAS Server is not connected to the AMQP server : $rc"
-	return $OCF_NOT_RUNNING
+        ocf_log_warn "Neutron LBAAS Server is not connected to the AMQP server : $rc"
+        # gukai 2015.3.12 it is not necessory to check amqp server, lbaas agent would run in network agent which would not run amqp server.
+	# return $OCF_NOT_RUNNING
     fi
 
     ocf_log debug "OpenStack LBAAS Server (neutron-lbaas-agent) monitor succeeded"
