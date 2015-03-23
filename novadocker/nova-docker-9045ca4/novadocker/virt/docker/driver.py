@@ -111,7 +111,7 @@ class DockerDriver(driver.ComputeDriver):
         """Plug VIFs into container."""
         if not network_info:
             return
-        container_id = self._find_container_by_name(instance['name']).get('id')
+        container_id = self._find_container_by_name(instance['hostname']).get('id')
         if not container_id:
             return
         netns_path = '/var/run/netns'
@@ -143,9 +143,9 @@ class DockerDriver(driver.ComputeDriver):
         return {}
 
     def get_info(self, instance):
-        container = self._find_container_by_name(instance['name'])
+        container = self._find_container_by_name(instance['hostname'])
         if not container:
-            raise exception.InstanceNotFound(instance_id=instance['name'])
+            raise exception.InstanceNotFound(instance_id=instance['hostname'])
         running = container['State'].get('Running')
         mem = container['Config'].get('Memory', 0)
 
@@ -236,7 +236,7 @@ class DockerDriver(driver.ComputeDriver):
         if fmt != 'docker':
             msg = _('Image container format not supported ({0})')
             raise exception.InstanceDeployFailure(msg.format(fmt),
-                                                  instance_id=instance['name'])
+                                                  instance_id=instance['hostname'])
         return image['name']
 
     def _pull_missing_image(self, context, image_meta, instance):
@@ -262,7 +262,7 @@ class DockerDriver(driver.ComputeDriver):
         return self.docker.inspect_image(image_meta['name'])
 
     def _start_container(self, instance, network_info=None):
-        container_id = self._find_container_by_name(instance['name']).get('id')
+        container_id = self._find_container_by_name(instance['hostname']).get('id')
         if not container_id:
             return
 
@@ -275,7 +275,7 @@ class DockerDriver(driver.ComputeDriver):
             self.docker.kill_container(container_id)
             self.docker.destroy_container(container_id)
             raise exception.InstanceDeployFailure(msg.format(e),
-                                                  instance_id=instance['name'])
+                                                  instance_id=instance['hostname'])
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
@@ -294,7 +294,7 @@ class DockerDriver(driver.ComputeDriver):
             image_id = image_meta_uuid[0:8] + image_meta_uuid[9:13]
 
         args = {
-            'Hostname': instance['name'],
+            'Hostname': instance['hostname'],
             'Image': image_name,
             'Memory': self._get_memory_limit_bytes(instance),
             'CpuShares': self._get_cpu_shares(instance),
@@ -318,19 +318,19 @@ class DockerDriver(driver.ComputeDriver):
         if not container_id:
             raise exception.InstanceDeployFailure(
                 _('Cannot create container'),
-                instance_id=instance['name'])
+                instance_id=instance['hostname'])
 
         self._start_container(instance, network_info)
 
     def restore(self, instance):
-        container_id = self._find_container_by_name(instance['name']).get('id')
+        container_id = self._find_container_by_name(instance['hostname']).get('id')
         if not container_id:
             return
 
         self._start_container(instance)
 
     def soft_delete(self, instance):
-        container_id = self._find_container_by_name(instance['name']).get('id')
+        container_id = self._find_container_by_name(instance['hostname']).get('id')
         if not container_id:
             return
         self.docker.stop_container(container_id)
@@ -344,7 +344,7 @@ class DockerDriver(driver.ComputeDriver):
     def cleanup(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True):
         """Cleanup after instance being destroyed by Hypervisor."""
-        container_id = self._find_container_by_name(instance['name']).get('id')
+        container_id = self._find_container_by_name(instance['hostname']).get('id')
         if not container_id:
             return
         self.docker.destroy_container(container_id)
@@ -353,7 +353,7 @@ class DockerDriver(driver.ComputeDriver):
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
-        container_id = self._find_container_by_name(instance['name']).get('id')
+        container_id = self._find_container_by_name(instance['hostname']).get('id')
         if not container_id:
             return
         if not self.docker.stop_container(container_id):
@@ -378,7 +378,7 @@ class DockerDriver(driver.ComputeDriver):
             return
 
     def power_on(self, context, instance, network_info, block_device_info):
-        container_id = self._find_container_by_name(instance['name']).get('id')
+        container_id = self._find_container_by_name(instance['hostname']).get('id')
         if not container_id:
             return
         self.docker.start_container(container_id)
@@ -390,10 +390,10 @@ class DockerDriver(driver.ComputeDriver):
             self.docker.kill_container(container_id)
             self.docker.destroy_container(container_id)
             raise exception.InstanceDeployFailure(msg.format(e),
-                                                  instance_id=instance['name'])
+                                                  instance_id=instance['hostname'])
 
     def power_off(self, instance, timeout=0, retry_interval=0):
-        container_id = self._find_container_by_name(instance['name']).get('id')
+        container_id = self._find_container_by_name(instance['hostname']).get('id')
         if not container_id:
             return
         self.docker.stop_container(container_id, timeout)
@@ -404,13 +404,13 @@ class DockerDriver(driver.ComputeDriver):
         :param instance: nova.objects.instance.Instance
         """
         try:
-            cont_id = self._find_container_by_name(instance['name']).get('id')
+            cont_id = self._find_container_by_name(instance['hostname']).get('id')
             if not self.docker.pause_container(cont_id):
                 raise exception.NovaException
         except Exception as e:
             msg = _('Cannot pause container: {0}')
             raise exception.NovaException(msg.format(e),
-                                          instance_id=instance['name'])
+                                          instance_id=instance['hostname'])
 
     def unpause(self, instance):
         """Unpause paused VM instance.
@@ -418,13 +418,13 @@ class DockerDriver(driver.ComputeDriver):
         :param instance: nova.objects.instance.Instance
         """
         try:
-            cont_id = self._find_container_by_name(instance['name']).get('id')
+            cont_id = self._find_container_by_name(instance['hostname']).get('id')
             if not self.docker.unpause_container(cont_id):
                 raise exception.NovaException
         except Exception as e:
             msg = _('Cannot unpause container: {0}')
             raise exception.NovaException(msg.format(e),
-                                          instance_id=instance['name'])
+                                          instance_id=instance['hostname'])
 
     def get_console_output(self, context, instance):
         container_id = self._find_container_by_name(instance.name).get('id')
@@ -433,7 +433,7 @@ class DockerDriver(driver.ComputeDriver):
         return self.docker.get_container_logs(container_id)
 
     def snapshot(self, context, instance, image_href, update_task_state):
-        container_id = self._find_container_by_name(instance['name']).get('id')
+        container_id = self._find_container_by_name(instance['hostname']).get('id')
         if not container_id:
             raise exception.InstanceNotRunning(instance_id=instance['uuid'])
 
@@ -473,7 +473,7 @@ class DockerDriver(driver.ComputeDriver):
         except Exception as e:
             msg = _('Error saving image: {0}')
             raise exception.NovaException(msg.format(e),
-                                          instance_id=instance['name'])
+                                          instance_id=instance['hostname'])
 
     def _get_cpu_shares(self, instance):
         """Get allocated CPUs from configured flavor.
