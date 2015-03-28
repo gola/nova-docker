@@ -99,7 +99,7 @@ class DockerDriver(driver.ComputeDriver):
             if inspect:
                 res.append(info)
             else:
-                res.append(info['Config'].get('Hostname'))
+                res.append(info['Name'][1:])
         return res
 
     def plug_vifs(self, instance, network_info):
@@ -138,7 +138,7 @@ class DockerDriver(driver.ComputeDriver):
 
     def _find_container_by_name(self, name):
         for info in self.list_instances(inspect=True):
-            if info['Config'].get('Hostname') == name:
+            if info['Name'][1:] == name:
                 return info
         return {}
 
@@ -294,7 +294,7 @@ class DockerDriver(driver.ComputeDriver):
             image_id = image_meta_uuid[0:8] + image_meta_uuid[9:13]
 
         args = {
-            'Hostname': instance['name'],
+            'Hostname': instance['hostname'],
             'Image': image_name,
             'Memory': self._get_memory_limit_bytes(instance),
             'CpuShares': self._get_cpu_shares(instance),
@@ -494,7 +494,7 @@ class DockerDriver(driver.ComputeDriver):
         return int(flavor['vcpus']) * 1024
 
     def _create_container(self, instance, args):
-        name = "nova-" + instance['uuid']
+        name = instance['name']
         return self.docker.create_container(args, name)
 
     def get_host_uptime(self, host):
