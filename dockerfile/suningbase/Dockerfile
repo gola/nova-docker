@@ -24,4 +24,6 @@ RUN rpm -ivh /tmp/supervisor-2.1-8.el6.noarch.rpm /tmp/python-meld3-0.6.7-1.el6.
 # clean tmp data.
 RUN rm -rf /tmp/*
 
-CMD ["/usr/bin/supervisord"]
+#init script and command.
+ADD startup.sh /bin/startup.sh
+CMD /bin/startup.sh && sysctl -p && supervisord
