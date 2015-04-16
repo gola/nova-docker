@@ -21,6 +21,9 @@ RUN rpm -ivh /tmp/python-jinja2-2.2.1-1.el6.x86_64.rpm /tmp/python-msgpack-0.1.1
 RUN mkdir -p /var/log/supervisor
 RUN rpm -ivh /tmp/supervisor-2.1-8.el6.noarch.rpm /tmp/python-meld3-0.6.7-1.el6.x86_64.rpm
 
+# fix passwd command err: /usr/share/cracklib/pw_dict.pwd: No such file or directory 
+yum reinstall cracklib-dicts
+
 # clean tmp data.
 RUN rm -rf /tmp/*
 
