@@ -2,7 +2,7 @@
 %define version 9045ca4
 %define unmangled_version 9045ca4
 %define unmangled_version 9045ca4
-%define release 3
+%define release 4
 
 Summary: Docker driver for OpenStack Nova.
 Name: %{name}
