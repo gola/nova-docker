@@ -1,5 +1,5 @@
-#dockerbase:v3
-#docker build -t="dockerbase:v3" .
+#dockerbase:v4
+#docker build -t="dockerbase:v4" .
 From rhel:6.3
 
 # config ssh 
@@ -7,6 +7,8 @@ RUN mkdir -p /root/.ssh && chown root.root /root && chmod 700 /root/.ssh
 RUN echo 'root:123456' | chpasswd
 RUN sed  -i "/^[^#]*UsePAM/ s/.*/#&/"  /etc/ssh/sshd_config
 RUN echo "UsePAM no" >> /etc/ssh/sshd_config
+RUN sed  -i "/^[^#]*UseDNS/ s/.*/#&/"  /etc/ssh/sshd_config
+RUN echo "UseDNS no" >> /etc/ssh/sshd_config
 RUN ssh-keygen -q -N "" -t dsa -f /etc/ssh/ssh_host_dsa_key
 RUN ssh-keygen -q -N "" -t rsa -f /etc/ssh/ssh_host_rsa_key
 
@@ -20,7 +22,7 @@ RUN yum install -y python-crypto python-babel pciutils libyaml yum-utils libyaml
 RUN rpm -ivh /tmp/python-jinja2-2.2.1-1.el6.x86_64.rpm /tmp/python-msgpack-0.1.13-3.el6.x86_64.rpm /tmp/PyYAML-3.10-3.el6.x86_64.rpm  /tmp/salt-minion-2014.1.4-1.el6.noarch.rpm /tmp/python-zmq-2.2.0.1-1.el6.x86_64.rpm /tmp/salt-2014.1.4-1.el6.noarch.rpm /tmp/sshpass-1.05-5.el6.art.x86_64.rpm
 
 #HEHE,I can only say this. the host department let me do this.
-RUN yum install -y wget tar
+RUN yum install -y wget tar perl
 RUN adduser snadmin
 
 #install supervisor

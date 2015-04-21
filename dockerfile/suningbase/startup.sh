@@ -1,6 +1,7 @@
 #!/bin/sh
 hosts_file="/etc/hosts"
 resolv_file="/etc/resolv.conf"
+hostname_file="/etc/hostname"
 sysctl_file="/etc/sysctl.conf"
 docker_conf_dir="/etc/openstack-docker"
 log_file="/var/log/startup.log"
@@ -19,6 +20,12 @@ fi
 if [ -f ${docker_conf_dir}/resolv.conf ];then
     cat ${docker_conf_dir}/resolv.conf > ${resolv_file}
     echo `date` " reset resolv.conf to $resolv_file" >> $log_file
+fi
+
+if [ -f ${docker_conf_dir}/hostname ];then
+    cat ${docker_conf_dir}/hostname > ${hostname_file}
+    hostname `cat $hostname_file`
+    echo `date` " reset hostname to $hostname_file" >> $log_file
 fi
 
 if [ -f ${docker_conf_dir}/sysctl.conf ];then
