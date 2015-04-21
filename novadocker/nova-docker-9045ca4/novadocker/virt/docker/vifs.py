@@ -188,6 +188,7 @@ class DockerGenericVIFDriver(object):
     def attach(self, instance, vif, container_id):
         vif_type = vif['type']
         if_remote_name = 'ns%s' % vif['id'][:11]
+        if_remote_name_suning = 'eth0'
         gateway = network.find_gateway(instance, vif['network'])
         ip = network.find_fixed_ip(instance, vif['network'])
         dhcp_server = network.find_dhcp_server(instance, vif['network'])
