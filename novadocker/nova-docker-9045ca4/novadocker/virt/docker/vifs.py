@@ -201,13 +201,16 @@ class DockerGenericVIFDriver(object):
             utils.execute('ip', 'link', 'set', if_remote_name, 'netns',
                           container_id, run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'link',
-                          'set', if_remote_name, 'address', vif['address'],
+                          'set', if_remote_name, 'name', if_remote_name_suning,
+                          run_as_root=True)
+            utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'link',
+                          'set', if_remote_name_suning, 'address', vif['address'],
                           run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id, 'ifconfig',
-                          if_remote_name, ip, run_as_root=True)
+                          if_remote_name_suning, ip, run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id,
                           'ip', 'route', 'replace', 'default', 'via',
-                          gateway, 'dev', if_remote_name, run_as_root=True)
+                          gateway, 'dev', if_remote_name_suning, run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'route', 'add',
                           '169.254.169.254/32', 'via', dhcp_server)
         except Exception:
