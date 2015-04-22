@@ -273,7 +273,8 @@ class DockerDriver(driver.ComputeDriver):
         except Exception as e:
             msg = _('Cannot setup network: {0}')
             self.docker.kill_container(container_id)
-            self.docker.destroy_container(container_id)
+            #annotated by Mars Gu,2-15-4-22: destroy the container would delete user data. Dangerous!!
+            #self.docker.destroy_container(container_id)
             raise exception.InstanceDeployFailure(msg.format(e),
                                                   instance_id=instance['name'])
 
@@ -388,7 +389,8 @@ class DockerDriver(driver.ComputeDriver):
         except Exception as e:
             msg = _('Cannot setup network: {0}')
             self.docker.kill_container(container_id)
-            self.docker.destroy_container(container_id)
+            #annotated by Mars Gu,2-15-4-22: destroy the container would delete user data. Dangerous!!
+            #self.docker.destroy_container(container_id)
             raise exception.InstanceDeployFailure(msg.format(e),
                                                   instance_id=instance['name'])
 
