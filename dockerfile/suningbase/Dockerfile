@@ -1,5 +1,7 @@
-#dockerbase:v4
-#docker build -t="dockerbase:v4" .
+#dockerbase:v5
+#docker build -t="dockerbase:v5" .
+#docker save dockerbase > dockerbase-v5.tar
+#glance image-create --is-public=True --container-format=docker --disk-format=raw --name dockerbase:v5 < dockerbase-v5.tar
 From rhel:6.3
 
 # config ssh 
@@ -22,7 +24,8 @@ RUN yum install -y python-crypto python-babel pciutils libyaml yum-utils libyaml
 RUN rpm -ivh /tmp/python-jinja2-2.2.1-1.el6.x86_64.rpm /tmp/python-msgpack-0.1.13-3.el6.x86_64.rpm /tmp/PyYAML-3.10-3.el6.x86_64.rpm  /tmp/salt-minion-2014.1.4-1.el6.noarch.rpm /tmp/python-zmq-2.2.0.1-1.el6.x86_64.rpm /tmp/salt-2014.1.4-1.el6.noarch.rpm /tmp/sshpass-1.05-5.el6.art.x86_64.rpm
 
 #HEHE,I can only say this. the host department let me do this.
-RUN yum install -y wget tar perl
+RUN yum install -y wget tar perl unzip
+RUN yum update -y bash
 RUN adduser snadmin
 
 #install supervisor
