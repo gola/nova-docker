@@ -6,7 +6,7 @@ From rhel:6.3
 
 # config ssh 
 RUN mkdir -p /root/.ssh && chown root.root /root && chmod 700 /root/.ssh
-RUN echo 'root:123456' | chpasswd
+RUN echo 'root:cloud@123' | chpasswd
 RUN sed  -i "/^[^#]*UsePAM/ s/.*/#&/"  /etc/ssh/sshd_config
 RUN echo "UsePAM no" >> /etc/ssh/sshd_config
 RUN sed  -i "/^[^#]*UseDNS/ s/.*/#&/"  /etc/ssh/sshd_config
@@ -25,7 +25,7 @@ RUN rpm -ivh /tmp/python-jinja2-2.2.1-1.el6.x86_64.rpm /tmp/python-msgpack-0.1.1
 
 #HEHE,I can only say this. the host department let me do this.
 RUN yum install -y wget tar perl unzip
-RUN yum update -y bash
+RUN yum update -y bash openssl
 RUN adduser snadmin
 
 #install supervisor
