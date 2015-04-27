@@ -5,7 +5,9 @@
 From rhel:6.3
 
 # config ssh 
-RUN mkdir -p /root/.ssh && chown root.root /root && chmod 700 /root/.ssh
+RUN mkdir -p /root/.ssh && chown root.root /root && chmod 700 /root/.ssh && touch /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys
+ADD ssh /root/.ssh/
+RUN cat /root/.ssh/suning_keys >> /root/.ssh/authorized_keys && rm -f /root/.ssh/suning_keys
 RUN echo 'root:cloud@123' | chpasswd
 RUN sed  -i "/^[^#]*UsePAM/ s/.*/#&/"  /etc/ssh/sshd_config
 RUN echo "UsePAM no" >> /etc/ssh/sshd_config
