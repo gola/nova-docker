@@ -16,6 +16,10 @@ RUN echo "UseDNS no" >> /etc/ssh/sshd_config
 RUN ssh-keygen -q -N "" -t dsa -f /etc/ssh/ssh_host_dsa_key
 RUN ssh-keygen -q -N "" -t rsa -f /etc/ssh/ssh_host_rsa_key
 
+#system safe config
+RUN sed -i 's/PASS_MAX_DAYS.*/PASS_MAX_DAYS  180/' /etc/login.defs
+RUN sed -i 's/HISTSIZE=1000/HISTSIZE=100/' /etc/profile
+
 #add
 ADD yum.repos.d /etc/yum.repos.d
 ADD supervisord.conf /etc/supervisord.conf
