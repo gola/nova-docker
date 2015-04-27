@@ -1,7 +1,7 @@
-#dockerbase:v6
-#docker build -t="dockerbase:v6" .
-#docker save dockerbase > dockerbase-v6.tar
-#glance image-create --is-public=True --container-format=docker --disk-format=raw --name dockerbase:v6 < dockerbase-v6.tar
+#dockerbase:v7
+#docker build -t="dockerbase:v7" .
+#docker save dockerbase > dockerbase-v7.tar
+#glance image-create --is-public=True --container-format=docker --disk-format=raw --name dockerbase:v7 < dockerbase-v7.tar
 From rhel:6.3
 
 # config ssh 
@@ -21,6 +21,7 @@ RUN ssh-keygen -q -N "" -t rsa -f /etc/ssh/ssh_host_rsa_key
 
 #system safe config
 RUN sed -i 's/PASS_MAX_DAYS.*/PASS_MAX_DAYS  180/' /etc/login.defs
+RUN sed -i 's/PASS_MIN_LEN.*/PASS_MIN_LEN  8/' /etc/login.defs
 RUN sed -i 's/HISTSIZE=1000/HISTSIZE=100/' /etc/profile
 
 #add
