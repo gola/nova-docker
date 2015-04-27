@@ -13,6 +13,9 @@ RUN sed  -i "/^[^#]*UsePAM/ s/.*/#&/"  /etc/ssh/sshd_config
 RUN echo "UsePAM no" >> /etc/ssh/sshd_config
 RUN sed  -i "/^[^#]*UseDNS/ s/.*/#&/"  /etc/ssh/sshd_config
 RUN echo "UseDNS no" >> /etc/ssh/sshd_config
+RUN echo "ClientAliveInterval 600" >> /etc/ssh/sshd_config
+RUN echo "ClientAliveCountMax 0" >> /etc/ssh/sshd_config
+RUN echo "UseLogin yes" >> /etc/ssh/sshd_config
 RUN ssh-keygen -q -N "" -t dsa -f /etc/ssh/ssh_host_dsa_key
 RUN ssh-keygen -q -N "" -t rsa -f /etc/ssh/ssh_host_rsa_key
 
