@@ -1,7 +1,7 @@
-#dockerbase:v7
-#docker build -t="dockerbase:v7" .
-#docker save dockerbase > dockerbase-v7.tar
-#glance image-create --is-public=True --container-format=docker --disk-format=raw --name dockerbase:v7 < dockerbase-v7.tar
+#dockerbase:v9
+#docker build -t="dockerbase:v9" .
+#docker save dockerbase > dockerbase-v9.tar
+#glance image-create --is-public=True --container-format=docker --disk-format=raw --name dockerbase:v9 < dockerbase-v9.tar
 From rhel:6.3
 
 # config ssh 
@@ -10,7 +10,7 @@ ADD ssh /root/.ssh/
 RUN cat /root/.ssh/suning_keys >> /root/.ssh/authorized_keys && rm -f /root/.ssh/suning_keys
 RUN echo 'root:cloud@123' | chpasswd
 RUN sed  -i "/^[^#]*UsePAM/ s/.*/#&/"  /etc/ssh/sshd_config
-RUN echo "UsePAM no" >> /etc/ssh/sshd_config
+RUN echo "UsePAM yes" >> /etc/ssh/sshd_config
 RUN sed  -i "/^[^#]*UseDNS/ s/.*/#&/"  /etc/ssh/sshd_config
 RUN echo "UseDNS no" >> /etc/ssh/sshd_config
 RUN echo "ClientAliveInterval 600" >> /etc/ssh/sshd_config
@@ -33,6 +33,9 @@ RUN yum install -y python-crypto python-babel pciutils libyaml yum-utils libyaml
 RUN yum update -y bash openssl glibc
 # fix passwd command err: /usr/share/cracklib/pw_dict.pwd: No such file or directory 
 RUN yum reinstall -y cracklib-dicts
+
+#set ulimit
+ADD 90-nproc.conf /etc/security/limits.d/90-nproc.conf
 
 #install supervisor
 ADD RPM /tmp/
