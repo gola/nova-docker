@@ -20,6 +20,7 @@ Requires: 	python-babel >= 1.3
 Requires:	python-six >= 1.7.0
 Requires:	python-oslo-serialization >= 1.0.0
 Requires:	python-oslo-utils >= 1.0.0 
+Requires:	python-oslo-config > 1.4.0
 
 %description
 ===============================
