@@ -1,14 +1,12 @@
 %define name nova-docker
-%define version 9045ca4
-%define unmangled_version 9045ca4
-%define unmangled_version 9045ca4
-%define release 6
+%define version 1.1
+%define release 1
 
 Summary: Docker driver for OpenStack Nova.
 Name: %{name}
 Version: %{version}
 Release: %{release}
-Source0: %{name}-%{unmangled_version}.tar.gz
+Source0: %{name}-%{version}.tar.gz
 License: UNKNOWN
 Group: Development/Libraries
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -105,7 +103,7 @@ Features
 
 
 %prep
-%setup -n %{name}-%{unmangled_version} -n %{name}-%{unmangled_version}
+%setup -n %{name}-%{version} -n %{name}-%{version}
 
 %build
 python setup.py build
