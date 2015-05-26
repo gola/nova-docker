@@ -15,6 +15,7 @@ BuildArch: noarch
 Vendor: OpenStack <openstack-dev@lists.openstack.org>
 Url: http://www.openstack.org/
 
+Requires: 	docker-io
 Requires: 	python-pbr >= 0.5.21
 Requires: 	python-babel >= 1.3
 Requires:	python-six >= 1.7.0
