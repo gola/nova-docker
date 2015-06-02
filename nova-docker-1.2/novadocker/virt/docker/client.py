@@ -291,3 +291,10 @@ class DockerHTTPClient(object):
             ('force', '0'),
             ('tag', image_name.split(":")[1]))
         return (resp.code == 201)
+
+    #Add by Mars Gu - 2015-06-02
+    def docker_daemon_info(self):
+        resp = self.make_request('GET', 'info')
+        if resp.code != 200:
+            return {}
+        return resp.to_json()
