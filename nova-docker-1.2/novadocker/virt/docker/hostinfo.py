@@ -14,28 +14,53 @@
 #    under the License.
 
 import os
+import string
 from oslo.config import cfg
+from client import DockerHTTPClient
 
 CONF = cfg.CONF
 CONF.import_opt('instances_path', 'nova.compute.manager')
 
-def statvfs():
-    #docker_path = '/var/lib/docker'
-    docker_path = CONF.instances_path
-    
-    if not os.path.exists(docker_path):
-        docker_path = '/'
-    return os.statvfs(docker_path)
-
-
 def get_disk_usage():
-    # This is the location where Docker stores its containers. It's currently
-    # hardcoded in Docker so it's not configurable yet.
-    st = statvfs()
+    client = DockerHTTPClient()
+    info = client.docker_daemon_info()
+
+    data_total_raw = info['DriverStatus'][5][1].split()
+    data_used_raw = info['DriverStatus'][4][1].split()
+
+    data_total_unit = data_total_raw[1]
+    data_total_num = string.atof(data_total_raw[0])
+    if data_total_unit == 'TB':
+        data_total = data_total_num * 1024 * 1024 * 1024 * 1024
+    elif data_total_unit == 'GB':
+        data_total = data_total_num * 1024 * 1024 * 1024
+    elif data_total_unit == 'MB':
+        data_total = data_total_num * 1024 * 1024
+    elif data_total_unit == 'KB':
+        data_total = data_total_num * 1024
+    else:
+        data_total = 0
+
+    data_used_unit = data_used_raw[1]
+    data_used_num = string.atof(data_used_raw[0])
+    if data_used_unit == 'TB':
+        data_used = data_used_num * 1024 * 1024 * 1024 * 1024
+    elif data_used_unit == 'GB':
+        data_used = data_used_num * 1024 * 1024 * 1024
+    elif data_used_unit == 'MB':
+        data_used = data_used_num * 1024 * 1024
+    elif data_used_unit == 'KB':
+        data_used = data_used_num * 1024
+    else:
+        data_used = 0
+
+    data_total = int(data_total)
+    data_used = int(data_used)
+
     return {
-        'total': st.f_blocks * st.f_frsize,
-        'available': st.f_bavail * st.f_frsize,
-        'used': (st.f_blocks - st.f_bfree) * st.f_frsize
+        'total': data_total,
+        'available': data_used,
+        'used': data_total - data_used
     }
 
 
