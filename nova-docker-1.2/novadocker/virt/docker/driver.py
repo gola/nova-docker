@@ -40,6 +40,7 @@ from nova.virt import driver
 from nova.virt import images
 from novadocker.virt.docker import client as docker_client
 from novadocker.virt.docker import hostinfo
+from novadocker.virt.docker import cpuset_info
 from novadocker.virt.docker import network
 from novadocker.virt import hostutils
 
@@ -56,6 +57,10 @@ docker_opts = [
                     'snapshots.'),
     cfg.StrOpt('docker_allocation_ratio',
                default=5)
+    cfg.StrOpt('docker_cpu_mode',
+               default='cpushare',
+               help='Three mode support: cpushare(default)/cpuset/mix,'
+                    'refer man of docker-run to definition of cpushare and cpuset ')
 ]
 
 CONF.register_opts(docker_opts, 'docker')
@@ -303,6 +308,7 @@ class DockerDriver(driver.ComputeDriver):
             'Image': image_name,
             'Memory': self._get_memory_limit_bytes(instance),
             'CpuShares': self._get_cpu_shares(instance),
+            'Cpuset': self._get_cpu_set(instance),
             'NetworkDisabled': True,
         }
 
@@ -496,8 +502,26 @@ class DockerDriver(driver.ComputeDriver):
         the user (e.g. docker registry) which has
         the default CpuShares value of zero.
         """
-        flavor = flavors.extract_flavor(instance)
-        return int(flavor['vcpus']) * 1024
+        cpu_mode = CONF.docker.docker_cpu_mode
+        if cpu_mode == 'cpuset' or 'mix':
+            flavor = flavors.extract_flavor(instance)
+            return int(flavor['vcpus']) * 1024
+        else:
+            return
+
+    def _get_cpu_set(self, instance):
+        cpu_mode = CONF.docker.docker_cpu_mode
+        if cpu_mode == 'cpuset' or 'mix':
+            flavor = flavors.extract_flavor(instance)
+            cpu_num = int(flavor['vcpus'])
+            cpustats = cpuset_info.CpusetStatsMap()
+            cpustats.get_map()
+            ori_list = cpustats.less_set_cpus(cpu_num)
+            for cpu in ori_list:
+                set_str = set_str  +  ',' +  cpu[3:]
+            return set_str
+        else:
+            return
 
     def _create_container(self, instance, args):
         name = instance['name']
