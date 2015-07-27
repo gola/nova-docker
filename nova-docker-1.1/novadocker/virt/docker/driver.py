@@ -41,8 +41,9 @@ from nova.virt import images
 from novadocker.virt.docker import client as docker_client
 from novadocker.virt.docker import hostinfo
 from novadocker.virt.docker import network
+from novadocker.virt.docker import cpuset_info
 from novadocker.virt import hostutils
-from novadocker.virt import cpuset_info
+
 
 CONF = cfg.CONF
 CONF.import_opt('my_ip', 'nova.netconf')
@@ -498,6 +499,7 @@ class DockerDriver(driver.ComputeDriver):
         the user (e.g. docker registry) which has
         the default CpuShares value of zero.
         """
+        cpu_mode = CONF.docker.docker_cpu_mode
         if cpu_mode == 'cpushare' or cpu_mode == 'mix':
             flavor = flavors.extract_flavor(instance)
             return int(flavor['vcpus']) * 1024
