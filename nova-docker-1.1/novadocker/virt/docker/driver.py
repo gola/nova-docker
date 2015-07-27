@@ -42,6 +42,7 @@ from novadocker.virt.docker import client as docker_client
 from novadocker.virt.docker import hostinfo
 from novadocker.virt.docker import network
 from novadocker.virt import hostutils
+from novadocker.virt import cpuset_info
 
 CONF = cfg.CONF
 CONF.import_opt('my_ip', 'nova.netconf')
@@ -497,7 +498,7 @@ class DockerDriver(driver.ComputeDriver):
         the user (e.g. docker registry) which has
         the default CpuShares value of zero.
         """
-        if cpu_mode == 'cpushare' or 'mix':
+        if cpu_mode == 'cpushare' or cpu_mode == 'mix':
             flavor = flavors.extract_flavor(instance)
             return int(flavor['vcpus']) * 1024
         else:
@@ -505,13 +506,14 @@ class DockerDriver(driver.ComputeDriver):
 
     def _get_cpu_set(self, instance):
         cpu_mode = CONF.docker.docker_cpu_mode
-        if cpu_mode == 'cpuset' or 'mix':
+        if cpu_mode == 'cpuset' or cpu_mode == 'mix':
             flavor = flavors.extract_flavor(instance)
             cpu_num = int(flavor['vcpus'])
             cpustats = cpuset_info.CpusetStatsMap()
             cpustats.get_map()
             ori_list = cpustats.less_set_cpus(cpu_num)
-            for cpu in ori_list:
+            set_str = ori_list[0][3:]
+            for cpu in ori_list[1:]:
                 set_str = set_str  +  ',' +  cpu[3:]
             return set_str
         else:
