@@ -526,6 +526,7 @@ class DockerDriver(driver.ComputeDriver):
             if system_cpuset != '-1':
                 cpustats = cpuset_info.CpusetStatsMap(system_cpuset)
                 ori_list = cpustats.get_unsystem_cpu()
+                LOG.debug("unsystem cpulist is : %s" % ori_list)
                 set_str = ori_list[0][3:]
                 for cpu in ori_list[1:]:
                     set_str = set_str  +  ',' +  cpu[3:]
