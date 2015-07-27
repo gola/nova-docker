@@ -1,7 +1,9 @@
 #!/usr/bin/python
 from nova import utils
+from nova.openstack.common import log
 from novadocker.virt.docker import hostinfo
 
+LOG = log.getLogger(__name__)
 #def get_cpu_info():
 #    with open('/proc/cpuinfo') as f:
 #       pcpu_total = 0
@@ -19,11 +21,12 @@ class CpusetStatsMap(object):
         self.container_list=[]
         self.cpu_num = hostinfo.get_cpu_info()
         self.cpu_map = {}
+        self.sys_cpuset_list = []
         if system_cpuset != '-1':
             self.sys_cpuset_list = self._get_system_cpuset(system_cpuset)
         for i in range(self.cpu_num):
             cpu_name = "cpu" + str(i)
-            if i in  self.sys_cpuset_list:
+            if str(i) in self.sys_cpuset_list:
                 self.cpu_map[cpu_name] = -1
             else:
                 self.cpu_map[cpu_name] = 0
@@ -36,8 +39,8 @@ class CpusetStatsMap(object):
     def get_unsystem_cpu(self):
         unsystem_list=[]
         for cpu in self.cpu_map:
-            if self.cpu_map[cpu][1] != -1:
-                unsystem_list.append(cpu[0])
+            if self.cpu_map[cpu] != -1:
+                unsystem_list.append(cpu)
         return unsystem_list
 
     def _get_container_list(self, all=False):
@@ -82,12 +85,9 @@ class CpusetStatsMap(object):
 
         return ret_cpus
 
-
-
     def print_info(self):
         #print self.container_list
         print self.cpu_map
-
 
 
 class ParseCpuset(object):
