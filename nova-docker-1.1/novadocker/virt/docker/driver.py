@@ -61,7 +61,10 @@ docker_opts = [
     cfg.StrOpt('docker_cpu_mode',
                default='cpushare',
                help='Three mode support: cpushare(default)/cpuset/mix,'
-                    'refer man of docker-run to definition of cpushare and cpuset ')
+                    'refer man of docker-run to definition of cpushare and cpuset '),
+    cfg.StrOpt('docker_system_cpuset',
+               default='-1',
+               help='Location where obligate for system, default value is -1. ')
 ]
 
 CONF.register_opts(docker_opts, 'docker')
@@ -508,10 +511,11 @@ class DockerDriver(driver.ComputeDriver):
 
     def _get_cpu_set(self, instance):
         cpu_mode = CONF.docker.docker_cpu_mode
+        system_cpuset = CONF.docker.docker_system_cpuset
         if cpu_mode == 'cpuset' or cpu_mode == 'mix':
             flavor = flavors.extract_flavor(instance)
             cpu_num = int(flavor['vcpus'])
-            cpustats = cpuset_info.CpusetStatsMap()
+            cpustats = cpuset_info.CpusetStatsMap(system_cpuset)
             cpustats.get_map()
             ori_list = cpustats.less_set_cpus(cpu_num)
             set_str = ori_list[0][3:]
@@ -519,7 +523,16 @@ class DockerDriver(driver.ComputeDriver):
                 set_str = set_str  +  ',' +  cpu[3:]
             return set_str
         else:
-            return
+            if system_cpuset != '-1':
+                cpustats = cpuset_info.CpusetStatsMap(system_cpuset)
+                ori_list = cpustats.get_unsystem_cpu()
+                set_str = ori_list[0][3:]
+                for cpu in ori_list[1:]:
+                    set_str = set_str  +  ',' +  cpu[3:]
+                return set_str
+            else:
+                return
+
 
     def _create_container(self, instance, args):
         name = instance['name']

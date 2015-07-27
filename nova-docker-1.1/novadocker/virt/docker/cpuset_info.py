@@ -15,13 +15,30 @@ from novadocker.virt.docker import hostinfo
 class CpusetStatsMap(object):
     """ get cpuset stats """
 
-    def __init__(self):
+    def __init__(self, system_cpuset):
         self.container_list=[]
         self.cpu_num = hostinfo.get_cpu_info()
         self.cpu_map = {}
+        if system_cpuset != '-1':
+            self.sys_cpuset_list = self._get_system_cpuset(system_cpuset)
         for i in range(self.cpu_num):
             cpu_name = "cpu" + str(i)
-            self.cpu_map[cpu_name] = 0
+            if i in  self.sys_cpuset_list:
+                self.cpu_map[cpu_name] = -1
+            else:
+                self.cpu_map[cpu_name] = 0
+
+    def _get_system_cpuset(self, system_cpuset):
+        sys_cpu_list = ParseCpuset()
+        sys_cpu_list.parse(system_cpuset)
+        return sys_cpu_list.get_cpu_list()
+
+    def get_unsystem_cpu(self):
+        unsystem_list=[]
+        for cpu in self.cpu_map:
+            if self.cpu_map[cpu][1] != -1:
+                unsystem_list.append(cpu[0])
+        return unsystem_list
 
     def _get_container_list(self, all=False):
         if all:
@@ -37,6 +54,7 @@ class CpusetStatsMap(object):
 
     def _push_in_map(self, cpu_list):
         for cpu in cpu_list:
+            if cpu == '0': continue
             cpu_key = "cpu" + cpu
             self.cpu_map[cpu_key] = self.cpu_map[cpu_key] + 1
 
@@ -44,18 +62,27 @@ class CpusetStatsMap(object):
         self._get_container_list(False)
         for id in self.container_list:
             cn_cpu_str = self._get_cpuset_str(id)
-            cn_cpu_list = parse_cpuset()
+            cn_cpu_list = ParseCpuset()
             cn_cpu_list.parse(cn_cpu_str)
             self._push_in_map(cn_cpu_list.get_cpu_list())
         return self.cpu_map
 
     def less_set_cpus(self, num):
+        cont = 0
         ret_cpus = []
-        less_set_list = sorted(self.cpu_map.items(), key=lambda d:d[1], reverse=False)[0:num]
+        less_set_list = sorted(self.cpu_map.items(), key=lambda d:d[1], reverse=False)
         for cpu in less_set_list:
-            ret_cpus.append(cpu[0])
+            if not cpu[0][3:] in self.sys_cpuset_list:
+                ret_cpus.append(cpu[0])
+                cont = cont + 1
+            else:
+                continue
+            if cont >= num:
+                break
 
         return ret_cpus
+
+
 
     def print_info(self):
         #print self.container_list
@@ -63,7 +90,7 @@ class CpusetStatsMap(object):
 
 
 
-class parse_cpuset(object):
+class ParseCpuset(object):
     """parse cpuset config to a list"""
 
     def __init__(self):
