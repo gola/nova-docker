@@ -59,8 +59,8 @@ def get_disk_usage():
 
     return {
         'total': data_total,
-        'available': data_used,
-        'used': data_total - data_used
+        'available': data_total - data_used,
+        'used': data_used
     }
 
 
