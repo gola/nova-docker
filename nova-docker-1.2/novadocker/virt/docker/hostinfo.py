@@ -23,13 +23,22 @@ CONF.import_opt('instances_path', 'nova.compute.manager')
 
 def get_disk_usage():
     client = DockerHTTPClient()
-    info = client.docker_daemon_info()
+    driver_info = client.docker_daemon_info()['DriverStatus']
+    data_total_num = 0
+    data_used_num = 0
+    data_total_unit = ''
+    data_used_unit = ''
 
-    data_total_raw = info['DriverStatus'][5][1].split()
-    data_used_raw = info['DriverStatus'][4][1].split()
+    for key,value in driver_info:
+        if not cmp(key, 'Data Space Total'):
+            data_total_raw = value.split()
+            data_total_num = string.atof(data_total_raw[0])
+            data_total_unit = data_total_raw[1]
+        elif not cmp(key, 'Data Space Used'):
+            data_used_raw = value.split()
+            data_used_unit = data_used_raw[1]
+            data_used_num = string.atof(data_used_raw[0])
 
-    data_total_unit = data_total_raw[1]
-    data_total_num = string.atof(data_total_raw[0])
     if data_total_unit == 'TB':
         data_total = data_total_num * 1024 * 1024 * 1024 * 1024
     elif data_total_unit == 'GB':
@@ -41,8 +50,6 @@ def get_disk_usage():
     else:
         data_total = 0
 
-    data_used_unit = data_used_raw[1]
-    data_used_num = string.atof(data_used_raw[0])
     if data_used_unit == 'TB':
         data_used = data_used_num * 1024 * 1024 * 1024 * 1024
     elif data_used_unit == 'GB':
