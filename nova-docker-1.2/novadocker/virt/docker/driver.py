@@ -63,7 +63,11 @@ docker_opts = [
                     'refer man of docker-run to definition of cpushare and cpuset '),
     cfg.StrOpt('docker_system_cpuset',
                default='-1',
-               help='Location where obligate for system, default value is -1. ')
+               help='Location where obligate for system, default value is -1. '),
+    cfg.StrOpt('docker_storage_type',
+               default='device_mapper',
+               help='Location where obligate for system, default value is -1. '
+                    'Support list : device_mapper/overlayfs')
 ]
 
 CONF.register_opts(docker_opts, 'docker')
@@ -109,6 +113,30 @@ class DockerDriver(driver.ComputeDriver):
             else:
                 res.append(info['Name'][1:])
         return res
+
+    def resize_container_disk(self, instance, disk_info):
+        storage_type = CONF.docker.docker_storage_type
+        flavor = flavors.extract_flavor(instance)
+
+        if storage_type == "device_mapper":
+            self._resize_dm_disk(disk_info)
+            LOG.error('flavor type is %s' % type(flavor))
+            #LOG.error('flavor content is %s' % flavor)
+        elif storage_type == "overlayfs":
+            self._resize_overlayfs_disk()
+        else:
+            LOG.info('Nova not support resize disk feature for %s .' % storage_type)
+
+        return
+
+    def _resize_dm_disk(self, disk_info):
+        """resize container disk by device mapper command."""
+        #msg = 'Disk "%s" does not exist, fetching it...'
+        #LOG.debug(msg % image_meta['name'])
+        pass
+
+    def _resize_overlayfs_disk(self, disk_info):
+        pass
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
@@ -334,6 +362,7 @@ class DockerDriver(driver.ComputeDriver):
                 _('Cannot create container'),
                 instance_id=instance['name'])
 
+        #self.resize_container_disk(instance, "test")
         self._start_container(instance, network_info)
 
     def restore(self, instance):
