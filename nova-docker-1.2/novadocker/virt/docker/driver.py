@@ -425,6 +425,7 @@ class DockerDriver(driver.ComputeDriver):
         if not container_id:
             return
         self.docker.start_container(container_id)
+        self._attach_vifs(instance, network_info)
         try:
             self.plug_vifs(instance, network_info)
             self._attach_vifs(instance, network_info)
