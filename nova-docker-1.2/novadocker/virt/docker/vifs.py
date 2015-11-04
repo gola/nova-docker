@@ -63,7 +63,7 @@ class DockerGenericVIFDriver(object):
 
     def plug_ovs(self, instance, vif):
         if_local_name = 'tap%s' % vif['id'][:11]
-        if_remote_name = 'ns%s' % vif['id'][:11]
+        if_remote_name = 'eth0'
         bridge = vif['network']['bridge']
 
         # Device already exists so return.
@@ -187,8 +187,8 @@ class DockerGenericVIFDriver(object):
 
     def attach(self, instance, vif, container_id):
         vif_type = vif['type']
-        if_remote_name = 'ns%s' % vif['id'][:11]
-        if_remote_name_suning = 'eth0'
+        #if_remote_name = 'ns%s' % vif['id'][:11]
+        if_remote_name = 'eth0'
         gateway = network.find_gateway(instance, vif['network'])
         ip = network.find_fixed_ip(instance, vif['network'])
         dhcp_server = network.find_dhcp_server(instance, vif['network'])
@@ -202,16 +202,13 @@ class DockerGenericVIFDriver(object):
             utils.execute('ip', 'link', 'set', if_remote_name, 'netns',
                           container_id, run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'link',
-                          'set', if_remote_name, 'name', if_remote_name_suning,
-                          run_as_root=True)
-            utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'link',
-                          'set', if_remote_name_suning, 'address', vif['address'],
+                          'set', if_remote_name, 'address', vif['address'],
                           run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id, 'ifconfig',
-                          if_remote_name_suning, ip, run_as_root=True)
+                          if_remote_name, ip, run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id,
                           'ip', 'route', 'replace', 'default', 'via',
-                          gateway, 'dev', if_remote_name_suning, run_as_root=True)
+                          gateway, 'dev', if_remote_name, run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'route', 'add',
                           '169.254.169.254/32', 'via', dhcp_server)
         except Exception:
