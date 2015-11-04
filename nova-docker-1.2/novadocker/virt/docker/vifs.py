@@ -35,6 +35,18 @@ CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('vlan_interface', 'nova.manager')
 CONF.import_opt('flat_interface', 'nova.manager')
 
+#CONF.import_opt('ovs_work_type','docker')
+docker_opts = [
+        cfg.StrOpt('ovs_work_type',
+               default='direct',
+               help='Type of OVS(direct/hybird), '
+                    'direct is default,'
+                    'hybird add an linux between ovs and container.'
+                    'hybird only work if ovs_hybrid_plug set in port details ')
+]
+CONF.register_opts(docker_opts, 'docker')
+
+
 LOG = logging.getLogger(__name__)
 
 
@@ -62,6 +74,14 @@ class DockerGenericVIFDriver(object):
                 _("Unexpected vif_type=%s") % vif_type)
 
     def plug_ovs(self, instance, vif):
+        if CONF.ovs_work_type == "hybird" and  vif.is_hybrid_plug_enabled():
+            LOG.debug('ovs type is hybird..')
+            self.plug_ovs_hybird(instance, vif)
+        else:
+            LOG.debug('ovs type is direct')
+            self.plug_ovs_bridge(instance, vif)
+
+    def plug_ovs_bridge(self, instance, vif):
         if_local_name = 'tap%s' % vif['id'][:11]
         if_remote_name = 'eth0'
         bridge = vif['network']['bridge']
@@ -85,6 +105,54 @@ class DockerGenericVIFDriver(object):
             LOG.exception("Failed to configure network")
             msg = _('Failed to setup the network, rolling back')
             undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
+
+    def plug_ovs_hybird(self, instance, vif):
+        iface_id = vif['id'][:11]
+        if_local_name = 'tap%s' % iface_id
+        if_remote_name = 'eth0'
+        v1_name = 'qvb%s' % iface_id
+        v2_name = 'qvo%s' % iface_id
+        if_bridge = 'qbr%s' % iface_id
+        ovs_bridge = vif['network']['bridge']
+
+        # Device already exists so return.
+        if linux_net.device_exists(if_local_name):
+            return
+        undo_mgr = utils.UndoManager()
+
+        try:
+            if not linux_net.device_exists(if_bridge):
+                utils.execute('brctl', 'addbr', if_bridge, run_as_root=True)
+                utils.execute('brctl', 'setfd', if_bridge, 0, run_as_root=True)
+                utils.execute('brctl', 'stp', if_bridge, 'off', run_as_root=True)
+                utils.execute('tee',
+                              ('/sys/class/net/%s/bridge/multicast_snooping' %
+                               if_bridge),
+                              process_input='0',
+                              run_as_root=True,
+                              check_exit_code=[0, 1])
+
+
+            if not linux_net.device_exists(v2_name):
+                linux_net._create_veth_pair(v1_name, v2_name)
+                utils.execute('ip', 'link', 'set', if_bridge, 'up', run_as_root=True)
+                utils.execute('brctl', 'addif', if_bridge, v1_name, run_as_root=True)
+                linux_net.create_ovs_vif_port(ovs_bridge,
+                                              v2_name, iface_id, vif['address'],
+                                              instance['uuid'])
+
+            if not linux_net.device_exists(if_local_name):
+                utils.execute('ip', 'link', 'add', 'name', if_local_name, 'type',
+                              'veth', 'peer', 'name', if_remote_name,
+                              run_as_root=True)
+                utils.execute('ip', 'link', 'set', if_local_name, 'up',
+                              run_as_root=True)
+                utils.execute('brctl', 'addif', if_bridge, if_local_name,
+                              run_as_root=True)
+           except Exception:
+                LOG.exception("Failed to configure network in hybird type.")
+                msg = _('Failed to setup the network, rolling back')
+                undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
 
     # We are creating our own mac's now because the linux bridge interface
     # takes on the lowest mac that is assigned to it.  By using FE range
