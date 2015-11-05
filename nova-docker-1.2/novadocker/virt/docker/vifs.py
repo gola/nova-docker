@@ -74,7 +74,7 @@ class DockerGenericVIFDriver(object):
                 _("Unexpected vif_type=%s") % vif_type)
 
     def plug_ovs(self, instance, vif):
-        if CONF.ovs_work_type == "hybird" and  vif.is_hybrid_plug_enabled():
+        if CONF.docker.ovs_work_type == "hybird" and  vif.is_hybrid_plug_enabled():
             LOG.debug('ovs type is hybird..')
             self.plug_ovs_hybird(instance, vif)
         else:
@@ -83,7 +83,7 @@ class DockerGenericVIFDriver(object):
 
     def plug_ovs_bridge(self, instance, vif):
         if_local_name = 'tap%s' % vif['id'][:11]
-        if_remote_name = 'eth0'
+        if_remote_name = 'ns%s' % vif['id'][:11]
         bridge = vif['network']['bridge']
 
         # Device already exists so return.
@@ -149,10 +149,10 @@ class DockerGenericVIFDriver(object):
                               run_as_root=True)
                 utils.execute('brctl', 'addif', if_bridge, if_local_name,
                               run_as_root=True)
-           except Exception:
-                LOG.exception("Failed to configure network in hybird type.")
-                msg = _('Failed to setup the network, rolling back')
-                undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
+        except Exception:
+            LOG.exception("Failed to configure network in hybird type.")
+            msg = _('Failed to setup the network, rolling back')
+            undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
 
     # We are creating our own mac's now because the linux bridge interface
     # takes on the lowest mac that is assigned to it.  By using FE range
@@ -241,9 +241,24 @@ class DockerGenericVIFDriver(object):
 
     def unplug_ovs(self, instance, vif):
         """Unplug the VIF by deleting the port from the bridge."""
+        iface_id = vif['id'][:11]
+        v1_name = 'qvb%s' % iface_id
+        v2_name = 'qvo%s' % iface_id
+        if_bridge = 'qbr%s' % iface_id
+        ovs_bridge = vif['network']['bridge'].
         try:
-            linux_net.delete_ovs_vif_port(vif['network']['bridge'],
-                                          vif['devname'])
+            if CONF.docker.ovs_work_type == "hybird" and  vif.is_hybrid_plug_enabled():
+                #del linux br
+                if linux_net.device_exists(if_bridge):
+                    utils.execute('brctl', 'delif', if_bridge, v1_name, run_as_root=True)
+                    utils.execute('ip', 'link', 'set', if_bridge, 'down', run_as_root=True)
+                    utils.execute('brctl', 'delbr', if_bridge, run_as_root=True)
+                #del qvb port
+                if linux_net.device_exists(v1_name):
+                    utils.execute('ip', 'link', 'delete', v1_name, run_as_root=True)
+                #ip link delete pair1
+
+            linux_net.delete_ovs_vif_port(ovs_bridge,vif['devname'])
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 

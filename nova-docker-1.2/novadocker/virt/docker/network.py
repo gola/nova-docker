@@ -23,6 +23,7 @@ LOG = log.getLogger(__name__)
 
 
 def teardown_network(container_id):
+    #if delete netns ,the veth pair will be deleted auto.
     try:
         output, err = utils.execute('ip', '-o', 'netns', 'list')
         for line in output.split('\n'):
