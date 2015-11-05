@@ -245,7 +245,7 @@ class DockerGenericVIFDriver(object):
         v1_name = 'qvb%s' % iface_id
         v2_name = 'qvo%s' % iface_id
         if_bridge = 'qbr%s' % iface_id
-        ovs_bridge = vif['network']['bridge'].
+        ovs_bridge = vif['network']['bridge']
         try:
             if CONF.docker.ovs_work_type == "hybird" and  vif.is_hybrid_plug_enabled():
                 #del linux br
