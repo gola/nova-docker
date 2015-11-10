@@ -105,10 +105,11 @@ class DockerDriver(driver.ComputeDriver):
     def list_instances(self, inspect=False):
         res = []
         for container in self.docker.list_containers():
-            info = self.docker.inspect_container(container['id'])
-            if not info:
-                continue
+            #info = self.docker.inspect_container(container['id'])
+            #if not info:
+            #   continue
             if inspect:
+                info = self.docker.inspect_container(container['id'])
                 res.append(info)
             else:
                 res.append(info['Name'][1:])
