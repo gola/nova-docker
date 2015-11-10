@@ -240,25 +240,39 @@ class DockerGenericVIFDriver(object):
                 _("Unexpected vif_type=%s") % vif_type)
 
     def unplug_ovs(self, instance, vif):
-        """Unplug the VIF by deleting the port from the bridge."""
+        if CONF.docker.ovs_work_type == "hybird" and  vif.is_hybrid_plug_enabled():
+            LOG.debug('ovs type is hybird..')
+            self.unplug_ovs_hybird(instance, vif)
+        else:
+            LOG.debug('ovs type is direct')
+            self.unplug_ovs_bridge(instance, vif)
+
+    def unplug_ovs_hybird(self, instance, vif):
+        """Unplug the VIF by deleting the port from the ovs hybird ovs mode."""
         iface_id = vif['id'][:11]
         v1_name = 'qvb%s' % iface_id
         v2_name = 'qvo%s' % iface_id
         if_bridge = 'qbr%s' % iface_id
         ovs_bridge = vif['network']['bridge']
         try:
-            if CONF.docker.ovs_work_type == "hybird" and  vif.is_hybrid_plug_enabled():
-                #del linux br
-                if linux_net.device_exists(if_bridge):
-                    utils.execute('brctl', 'delif', if_bridge, v1_name, run_as_root=True)
-                    utils.execute('ip', 'link', 'set', if_bridge, 'down', run_as_root=True)
-                    utils.execute('brctl', 'delbr', if_bridge, run_as_root=True)
-                #del qvb port
-                if linux_net.device_exists(v1_name):
-                    utils.execute('ip', 'link', 'delete', v1_name, run_as_root=True)
-                #ip link delete pair1
+            #del linux br
+            if linux_net.device_exists(if_bridge):
+                utils.execute('brctl', 'delif', if_bridge, v1_name, run_as_root=True)
+                utils.execute('ip', 'link', 'set', if_bridge, 'down', run_as_root=True)
+                utils.execute('brctl', 'delbr', if_bridge, run_as_root=True)
+           #del qvb port
+            if linux_net.device_exists(v1_name):
+                utils.execute('ip', 'link', 'delete', v1_name, run_as_root=True)
+            #ip link delete pair1
+            linux_net.delete_ovs_vif_port(ovs_bridge,v2_name)
+        except processutils.ProcessExecutionError:
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
-            linux_net.delete_ovs_vif_port(ovs_bridge,vif['devname'])
+    def unplug_ovs_bridge(self, instance, vif):
+        """Unplug the VIF by deleting the port from the bridge."""
+        try:
+            linux_net.delete_ovs_vif_port(vif['network']['bridge'],
+                                          vif['devname'])
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
@@ -274,6 +288,7 @@ class DockerGenericVIFDriver(object):
         if_remote_rename = 'eth0'
         gateway = network.find_gateway(instance, vif['network'])
         ip = network.find_fixed_ip(instance, vif['network'])
+        ip_nocidr = ip.split('/')[0]
         dhcp_server = network.find_dhcp_server(instance, vif['network'])
 
         LOG.debug('attach vif_type=%(vif_type)s instance=%(instance)s '
@@ -297,7 +312,8 @@ class DockerGenericVIFDriver(object):
                           gateway, 'dev', if_remote_rename, run_as_root=True)
             #send free arp avovid apr proxy in switch.
             utils.execute('ip', 'netns', 'exec', container_id,
-                          'arping', '-U', '-I', if_remote_rename, ip, '-c', '3', run_as_root=True)
+                          'arping', '-c', '50' , '-f', '-U', '-I',
+                          if_remote_rename, ip_nocidr, run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'route', 'add',
                           '169.254.169.254/32', 'via', dhcp_server)
         except Exception:
