@@ -295,6 +295,9 @@ class DockerGenericVIFDriver(object):
             utils.execute('ip', 'netns', 'exec', container_id,
                           'ip', 'route', 'replace', 'default', 'via',
                           gateway, 'dev', if_remote_rename, run_as_root=True)
+            #send free arp avovid apr proxy in switch.
+            utils.execute('ip', 'netns', 'exec', container_id,
+                          'arping', '-U', '-I', if_remote_rename, ip, '-c', '3', run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'route', 'add',
                           '169.254.169.254/32', 'via', dhcp_server)
         except Exception:
