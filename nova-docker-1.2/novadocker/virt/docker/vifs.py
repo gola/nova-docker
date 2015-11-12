@@ -310,11 +310,14 @@ class DockerGenericVIFDriver(object):
             utils.execute('ip', 'netns', 'exec', container_id,
                           'ip', 'route', 'replace', 'default', 'via',
                           gateway, 'dev', if_remote_rename, run_as_root=True)
-            #send free arp avovid apr proxy in switch.
-            utils.execute('ip', 'netns', 'exec', container_id,
-                          'arping', '-c', '50' , '-f', '-U', '-I',
-                          if_remote_rename, ip_nocidr, run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'route', 'add',
                           '169.254.169.254/32', 'via', dhcp_server)
+            #send free arp avovid apr proxy in switch.
+            utils.execute('ip', 'netns', 'exec', container_id,
+                          'arping', '-c', '1' ,'-U', '-I',
+                          if_remote_rename, ip_nocidr, run_as_root=True)
+            utils.execute('ip', 'netns', 'exec', container_id,
+                          'ping', '-c', '1' ,
+                          gateway, run_as_root=True)
         except Exception:
             LOG.exception("Failed to attach vif")
