@@ -102,12 +102,18 @@ class DockerDriver(driver.ComputeDriver):
         except socket.error:
             return False
 
-    def list_instances(self, inspect=False):
+    def list_instances(self, inspect=False, onlyname=True):
         """
         If call this without inspect, return "Name" and "id", do not inspect all instance.
         """
         res = []
         for container in self.docker.list_containers():
+            local_name = container['names'][0]
+            local_id = container['id']
+
+            if onlyname:
+                res.append(local_name[1:])
+                continue
             if inspect:
                 info = self.docker.inspect_container(container['id'])
                 if not info:
@@ -177,13 +183,13 @@ class DockerDriver(driver.ComputeDriver):
             self.vif_driver.unplug(instance, vif)
 
     def _find_container_by_name(self, name):
-        for info in self.list_instances(inspect=False):
+        for info in self.list_instances(inspect=False, onlyname=True):
             if info['Name'][1:] == name:
                 return info
         return {}
 
     def _find_container_info_by_name(self, name):
-        for ct in self.list_instances(inspect=False):
+        for ct in self.list_instances(inspect=False, onlyname=True):
             if ct['Name'][1:] == name:
                 info = self.docker.inspect_container(ct.get('id'))
                 return info
