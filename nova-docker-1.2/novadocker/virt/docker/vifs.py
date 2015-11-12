@@ -316,8 +316,9 @@ class DockerGenericVIFDriver(object):
             utils.execute('ip', 'netns', 'exec', container_id,
                           'arping', '-c', '1' ,'-U', '-I',
                           if_remote_rename, ip_nocidr, run_as_root=True)
-            utils.execute('ip', 'netns', 'exec', container_id,
-                          'ping', '-c', '1' ,
-                          gateway, run_as_root=True)
+            #Error while ping the gateway, put an init script in docker_init_exc.
+            #utils.execute('ip', 'netns', 'exec', container_id,
+            #             'ping', '-c', '1' ,
+            #            gateway, run_as_root=True)
         except Exception:
             LOG.exception("Failed to attach vif")
