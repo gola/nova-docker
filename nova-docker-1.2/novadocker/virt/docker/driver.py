@@ -103,16 +103,19 @@ class DockerDriver(driver.ComputeDriver):
             return False
 
     def list_instances(self, inspect=False):
+        """
+        If call this without inspect, return "Name" and "id", do not inspect all instance.
+        """
         res = []
         for container in self.docker.list_containers():
-            #info = self.docker.inspect_container(container['id'])
-            #if not info:
-            #   continue
             if inspect:
                 info = self.docker.inspect_container(container['id'])
+                if not info:
+                    continue
                 res.append(info)
             else:
-                res.append(info['Name'][1:])
+                info={"Name":container['names'][0], "id":container['id']}
+                res.append(info)
         return res
 
     def resize_container_disk(self, instance, disk_info):
@@ -174,13 +177,20 @@ class DockerDriver(driver.ComputeDriver):
             self.vif_driver.unplug(instance, vif)
 
     def _find_container_by_name(self, name):
-        for info in self.list_instances(inspect=True):
+        for info in self.list_instances(inspect=False):
             if info['Name'][1:] == name:
                 return info
         return {}
 
+    def _find_container_info_by_name(self, name):
+        for ct in self.list_instances(inspect=False):
+            if ct['Name'][1:] == name:
+                info = self.docker.inspect_container(ct.get('id'))
+                return info
+        return {}
+
     def get_info(self, instance):
-        container = self._find_container_by_name(instance['name'])
+        container = self._find_container_info_by_name(instance['name'])
         if not container:
             raise exception.InstanceNotFound(instance_id=instance['name'])
         running = container['State'].get('Running')
@@ -257,7 +267,7 @@ class DockerDriver(driver.ComputeDriver):
             # container in order to get the the "container pid". This is
             # usually really fast. To avoid race conditions on a slow
             # machine, we allow 10 seconds as a hard limit.
-            if n > 20:
+            if n > 15:
                 return
             info = self.docker.inspect_container(container_id)
             if info:
@@ -265,7 +275,7 @@ class DockerDriver(driver.ComputeDriver):
                 # Pid is equal to zero if it isn't assigned yet
                 if pid:
                     return pid
-            time.sleep(0.5)
+            time.sleep(1)
             n += 1
 
     def _get_memory_limit_bytes(self, instance):
