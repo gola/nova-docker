@@ -183,13 +183,13 @@ class DockerDriver(driver.ComputeDriver):
             self.vif_driver.unplug(instance, vif)
 
     def _find_container_by_name(self, name):
-        for info in self.list_instances(inspect=False, onlyname=True):
+        for info in self.list_instances(inspect=False, onlyname=False):
             if info['Name'][1:] == name:
                 return info
         return {}
 
     def _find_container_info_by_name(self, name):
-        for ct in self.list_instances(inspect=False, onlyname=True):
+        for ct in self.list_instances(inspect=False, onlyname=False):
             if ct['Name'][1:] == name:
                 info = self.docker.inspect_container(ct.get('id'))
                 return info
