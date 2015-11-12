@@ -120,7 +120,7 @@ class DockerDriver(driver.ComputeDriver):
                     continue
                 res.append(info)
             else:
-                info={"Name":container['names'][0], "id":container['id']}
+                info={"Name": local_name, "id": local_id}
                 res.append(info)
         return res
 
