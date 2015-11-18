@@ -502,7 +502,7 @@ class DockerDriver(driver.ComputeDriver):
         update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
         (image_service, image_id) = glance.get_remote_image_service(
             context, image_href)
-        image = image_service.show(context, image_id)
+        image = image_service.show(context, image_id, True)
         name = image['name']
         default_tag = (':' not in name)
         commit_name = name if not default_tag else name + ':latest'
