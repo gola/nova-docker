@@ -148,6 +148,17 @@ class DockerDriver(driver.ComputeDriver):
     def _resize_overlayfs_disk(self, disk_info):
         pass
 
+    def attach_interface(self, instance, image_meta, vif):
+        """Attach an interface to the container."""
+        self.vif_driver.plug(instance, vif)
+        container_id = self._find_container_by_name(instance['name']).get('id')
+        self.vif_driver.attach(instance, vif, container_id, sec_if=True)
+
+    def detach_interface(self, instance, vif):
+        """Detach an interface from the container."""
+        self.vif_driver.unplug(instance, vif)
+
+
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
         for vif in network_info:

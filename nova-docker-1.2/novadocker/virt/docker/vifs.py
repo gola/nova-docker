@@ -282,10 +282,13 @@ class DockerGenericVIFDriver(object):
         # the bridge.
         pass
 
-    def attach(self, instance, vif, container_id):
+    def attach(self, instance, vif, container_id, sec_if=False):
         vif_type = vif['type']
         if_remote_name = 'ns%s' % vif['id'][:11]
-        if_remote_rename = 'eth0'
+        if not sec_if:
+            if_remote_rename = 'eth0'
+        else:
+            if_remote_rename = 'eth1'
         gateway = network.find_gateway(instance, vif['network'])
         ip = network.find_fixed_ip(instance, vif['network'])
         ip_nocidr = ip.split('/')[0]
@@ -307,11 +310,14 @@ class DockerGenericVIFDriver(object):
                           run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id, 'ifconfig',
                           if_remote_rename, ip, run_as_root=True)
-            utils.execute('ip', 'netns', 'exec', container_id,
-                          'ip', 'route', 'replace', 'default', 'via',
-                          gateway, 'dev', if_remote_rename, run_as_root=True)
-            utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'route', 'add',
-                          '169.254.169.254/32', 'via', dhcp_server)
+
+            if not sec_if:
+                utils.execute('ip', 'netns', 'exec', container_id,
+                              'ip', 'route', 'replace', 'default', 'via',
+                              gateway, 'dev', if_remote_rename, run_as_root=True)
+                utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'route', 'add',
+                              '169.254.169.254/32', 'via', dhcp_server)
+
             # Disable TSO, for now no config option
             utils.execute('ip', 'netns', 'exec', container_id, 'ethtool',
                           '--offload', if_remote_name, 'tso', 'off',
