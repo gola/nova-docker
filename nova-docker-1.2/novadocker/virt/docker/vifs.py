@@ -312,6 +312,11 @@ class DockerGenericVIFDriver(object):
                           gateway, 'dev', if_remote_rename, run_as_root=True)
             utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'route', 'add',
                           '169.254.169.254/32', 'via', dhcp_server)
+            # Disable TSO, for now no config option
+            utils.execute('ip', 'netns', 'exec', container_id, 'ethtool',
+                          '--offload', if_remote_name, 'tso', 'off',
+                          run_as_root=True)
+
             #send free arp avovid apr proxy in switch.
             utils.execute('ip', 'netns', 'exec', container_id,
                           'arping', '-c', '1' ,'-U', '-I',
