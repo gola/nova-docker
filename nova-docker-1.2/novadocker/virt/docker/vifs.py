@@ -320,7 +320,7 @@ class DockerGenericVIFDriver(object):
 
             # Disable TSO, for now no config option
             utils.execute('ip', 'netns', 'exec', container_id, 'ethtool',
-                          '--offload', if_remote_name, 'tso', 'off',
+                          '--offload', if_remote_rename, 'tso', 'off',
                           run_as_root=True)
 
             #send free arp avovid apr proxy in switch.
