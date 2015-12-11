@@ -49,12 +49,19 @@ CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 
 docker_opts = [
+    cfg.StrOpt('host_url',
+               default='unix:///var/run/docker.sock',
+               help='tcp://host:port to bind/connect to or '
+                    'unix://path/to/socket to use'),
     cfg.StrOpt('vif_driver',
                default='novadocker.virt.docker.vifs.DockerGenericVIFDriver'),
     cfg.StrOpt('snapshots_directory',
                default='$instances_path/snapshots',
                help='Location where docker driver will temporarily store '
                     'snapshots.'),
+    cfg.BoolOpt('privileged',
+                default=True,
+                help='Set true can own all root privileges in a container.'),
     cfg.StrOpt('docker_allocation_ratio',
                default=5),
     cfg.StrOpt('docker_cpu_mode',
@@ -87,7 +94,7 @@ class DockerDriver(driver.ComputeDriver):
     @property
     def docker(self):
         if self._docker is None:
-            self._docker = docker_client.DockerHTTPClient()
+            self._docker = docker_client.DockerHTTPClient(CONF.docker.host_url)
         return self._docker
 
     def init_host(self, host):

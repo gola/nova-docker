@@ -14,25 +14,24 @@
 #    under the License.
 
 import functools
-import socket
-import urllib
-
-from eventlet.green import httplib
-from oslo.serialization import jsonutils
+import inspect
 import six
-
 from nova.openstack.common import log as logging
+from oslo.config import cfg
+from docker import client
+from docker import tls
 
-
+CONF = cfg.CONF
+DEFAULT_TIMEOUT_SECONDS = 120
+DEFAULT_DOCKER_API_VERSION = '1.17'
 LOG = logging.getLogger(__name__)
 
 
 def filter_data(f):
     """Decorator that post-processes data returned by Docker.
-
      This will avoid any surprises with different versions of Docker.
     """
-    @functools.wraps(f)
+    @functools.wraps(f, assigned=[])
     def wrapper(*args, **kwds):
         out = f(*args, **kwds)
 
@@ -50,80 +49,22 @@ def filter_data(f):
         return _filter(out)
     return wrapper
 
+class DockerHTTPClient(client.Client):
+    def __init__(self, url='unix://var/run/docker.sock'):
+        ssl_config = False
+        #__init__(self, base_url=None, version=None, timeout=60, tls=False)
+        super(DockerHTTPClient, self).__init__(
+            base_url=url,
+            version=DEFAULT_DOCKER_API_VERSION,
+            timeout=DEFAULT_TIMEOUT_SECONDS,
+            tls=ssl_config
+        )
+        self._setup_decorators()
 
-class Response(object):
-    def __init__(self, http_response, url=None):
-        self.url = url
-        self._response = http_response
-        self.code = int(http_response.status)
-        self._json = None
-
-    def read(self, size=None):
-        return self._response.read(size)
-
-    def to_json(self, default=None):
-        if not self._json:
-            self._json = self._decode_json(self._response.read(), default)
-        return self._json
-
-    def _validate_content_type(self):
-        # Docker does not return always the correct Content-Type.
-        # Lets try to parse the response anyway since json is requested.
-        if self._response.getheader('Content-Type') != 'application/json':
-            LOG.debug("Content-Type of response is not application/json"
-                      " (Docker bug?). Requested URL %s" % self.url)
-
-    @filter_data
-    def _decode_json(self, data, default=None):
-        if not data:
-            return default
-        self._validate_content_type()
-        # Do not catch ValueError or SyntaxError since that
-        # just hides the root cause of errors.
-        return jsonutils.loads(data)
-
-
-class UnixHTTPConnection(httplib.HTTPConnection):
-    def __init__(self):
-        httplib.HTTPConnection.__init__(self, 'localhost')
-        self.unix_socket = '/var/run/docker.sock'
-
-    def connect(self):
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.connect(self.unix_socket)
-        self.sock = sock
-
-
-class DockerHTTPClient(object):
-    VERSION = 'v1.13'
-
-    def __init__(self, connection=None):
-        self._connection = connection
-
-    @property
-    def connection(self):
-        if self._connection:
-            return self._connection
-        else:
-            return UnixHTTPConnection()
-
-    def make_request(self, *args, **kwargs):
-        headers = {}
-        if 'headers' in kwargs and kwargs['headers']:
-            headers = kwargs['headers']
-        if 'Content-Type' not in headers:
-            headers['Content-Type'] = 'application/json'
-            kwargs['headers'] = headers
-        conn = self.connection
-
-        # args[1] == path, args[2:] == query represented as tuples
-        url = "/%s/%s" % (self.VERSION, urllib.quote(args[1]))
-        if len(args) > 2:
-            url += "?" + urllib.urlencode(args[2:])
-        encoded_args = args[0], url
-
-        conn.request(*encoded_args, **kwargs)
-        return Response(conn.getresponse(), url=encoded_args[1])
+    def _setup_decorators(self):
+        for name, member in inspect.getmembers(self, inspect.ismethod):
+            if not name.startswith('_'):
+                setattr(self, name, filter_data(member))
 
     def list_containers(self, _all=True):
         resp = self.make_request(
@@ -275,10 +216,6 @@ class DockerHTTPClient(object):
         if resp.code != 200:
             return
         return resp.read()
-
-    def ping(self):
-        resp = self.make_request('GET', '_ping')
-        return (resp.code == 200)
 
     #Add by Mars Gu - 2014-10-21.
     def tag(self,image_id,image_name):
