@@ -66,15 +66,6 @@ class DockerHTTPClient(client.Client):
             if not name.startswith('_'):
                 setattr(self, name, filter_data(member))
 
-    def list_containers(self, _all=True):
-        resp = self.make_request(
-            'GET',
-            'containers/ps',
-            ('all', int(_all)))
-        if resp.code == 404:
-            return []
-        return resp.to_json(default=[])
-
     def create_container(self, args, name):
         data = {
             'Hostname': '',
@@ -139,14 +130,6 @@ class DockerHTTPClient(client.Client):
                 unicode(image_name).encode('utf-8')))
         if resp.code != 200:
             return
-        return resp.to_json()
-
-    def inspect_container(self, container_id):
-        resp = self.make_request(
-            'GET',
-            'containers/{0}/json'.format(container_id))
-        if resp.code != 200:
-            return {}
         return resp.to_json()
 
     def stop_container(self, container_id, timeout=5):
