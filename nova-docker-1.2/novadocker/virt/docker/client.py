@@ -81,10 +81,3 @@ class DockerHTTPClient(client.Client):
     def get_container_logs(self, container_id):
         return self.attach(container_id, 1, 1, 0, 1)
 
-
-    #Add by Mars Gu - 2015-06-02
-    def docker_daemon_info(self):
-        resp = self.make_request('GET', 'info')
-        if resp.code != 200:
-            return {}
-        return resp.to_json()
