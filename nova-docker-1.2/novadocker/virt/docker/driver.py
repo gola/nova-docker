@@ -75,6 +75,12 @@ docker_opts = [
     cfg.StrOpt('docker_system_cpuset',
                default='-1',
                help='Location where obligate for system, default value is -1. '),
+    cfg.StrOpt('api_version',
+               default='1.17',
+               help='Docker API Version used to Manage Container. '),
+    cfg.StrOpt('api_timeout',
+               default='360',
+               help='Docker API Timeout to finish a operation '),
     cfg.StrOpt('docker_storage_type',
                default='device_mapper',
                help='Location where obligate for system, default value is -1. '
@@ -98,7 +104,9 @@ class DockerDriver(driver.ComputeDriver):
     @property
     def docker(self):
         if self._docker is None:
-            self._docker = docker_client.DockerHTTPClient(CONF.docker.host_url)
+            self._docker = docker_client.DockerHTTPClient(CONF.docker.host_url,
+                                                          api_version=CONF.docker.api_version,
+                                                          api_timeout=CONF.docker.api_timeout)
         return self._docker
 
     def init_host(self, host):
@@ -544,11 +552,15 @@ class DockerDriver(driver.ComputeDriver):
         (image_service, image_id) = glance.get_remote_image_service(
             context, image_href)
         image = image_service.show(context, image_id, True)
-        name = image['name']
-        default_tag = (':' not in name)
-        commit_name = name if not default_tag else name + ':latest'
+        if ':' not in image['name']:
+            commit_name = self._encode_utf8(image['name'])
+            tag = 'latest'
+        else:
+            parts = self._encode_utf8(image['name']).rsplit(':', 1)
+            commit_name = parts[0]
+            tag = parts[1]
 
-        self.docker.commit_container(container_id, commit_name)
+        self.docker.commit(container_id, repository=commit_name, tag=tag)
 
         update_task_state(task_state=task_states.IMAGE_UPLOADING,
                           expected_state=task_states.IMAGE_PENDING_UPLOAD)
@@ -558,7 +570,7 @@ class DockerDriver(driver.ComputeDriver):
             'status': 'active',
             'disk_format': 'raw',
             'container_format': 'docker',
-            'name': name,
+            'name': image['name'],
             'properties': {
                 'image_location': 'snapshot',
                 'image_state': 'available',
@@ -571,9 +583,14 @@ class DockerDriver(driver.ComputeDriver):
             metadata['properties']['os_type'] = instance['os_type']
 
         try:
-            fh = self.docker.get_image_resp(commit_name)
-            image_service.update(context, image_href, metadata, fh)
+            raw = self.docker.get_image(commit_name)
+            # Patch the seek/tell as urllib3 throws UnsupportedOperation
+            raw.seek = lambda x=None, y=None: None
+            raw.tell = lambda: None
+            image_service.update(context, image_href, metadata, raw)
         except Exception as e:
+            LOG.debug(_('Error saving image: %s'),
+                      e, instance=instance, exc_info=True)
             msg = _('Error saving image: {0}')
             raise exception.NovaException(msg.format(e),
                                           instance_id=instance['name'])

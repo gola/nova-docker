@@ -22,8 +22,6 @@ from docker import client
 from docker import tls
 
 CONF = cfg.CONF
-DEFAULT_TIMEOUT_SECONDS = 120
-DEFAULT_DOCKER_API_VERSION = '1.17'
 LOG = logging.getLogger(__name__)
 
 
@@ -50,13 +48,13 @@ def filter_data(f):
     return wrapper
 
 class DockerHTTPClient(client.Client):
-    def __init__(self, url='unix://var/run/docker.sock'):
+    def __init__(self, url='unix://var/run/docker.sock',api_version="1.17", api_timeout=120):
         ssl_config = False
         #__init__(self, base_url=None, version=None, timeout=60, tls=False)
         super(DockerHTTPClient, self).__init__(
             base_url=url,
-            version=DEFAULT_DOCKER_API_VERSION,
-            timeout=DEFAULT_TIMEOUT_SECONDS,
+            version=api_version,
+            timeout=api_timeout,
             tls=ssl_config
         )
         self._setup_decorators()
