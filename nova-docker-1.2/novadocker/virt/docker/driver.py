@@ -252,7 +252,8 @@ class DockerDriver(driver.ComputeDriver):
                              'new': nodename})
 
         memory = hostinfo.get_memory_usage()
-        disk = hostinfo.get_disk_usage()
+        docker_info = self.docker.info()
+        disk = hostinfo.get_disk_usage(docker_info)
         vcpu_total = hostinfo.get_cpu_info() * int(CONF.docker.docker_allocation_ratio)
 
         stats = {

@@ -15,15 +15,10 @@
 
 import os
 import string
-from oslo.config import cfg
-from client import DockerHTTPClient
 
-CONF = cfg.CONF
-CONF.import_opt('instances_path', 'nova.compute.manager')
 
-def get_disk_usage():
-    client = DockerHTTPClient()
-    driver_info = client.docker_daemon_info()['DriverStatus']
+def get_disk_usage(docker_info):
+    driver_info = docker_info['DriverStatus']
     data_total_num = 0
     data_used_num = 0
     data_total_unit = ''
