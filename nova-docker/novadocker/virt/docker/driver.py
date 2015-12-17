@@ -406,7 +406,8 @@ class DockerDriver(driver.ComputeDriver):
         #args maybe set in host_config:  privileged
         name = instance['name']
         hostname = args.pop('hostname', None)
-        mem_limit = args.pop('mem_limit', None)
+        #mem_limit has been moved to host_config in API version 1.19
+        #mem_limit = args.pop('mem_limit', None)
         cpu_shares = args.pop('cpu_shares', None)
         cpuset=args.pop('cpuset', None)
         network_disabled = args.pop('network_disabled', False)
