@@ -415,7 +415,7 @@ class DockerDriver(driver.ComputeDriver):
                                             hostname=hostname,
                                             mem_limit=mem_limit,
                                             cpu_shares=cpu_shares,
-                                            cpu_set=cpuset,
+                                            cpuset=cpuset,
                                             network_disabled=network_disabled,
                                             environment=environment,
                                             command=command,
