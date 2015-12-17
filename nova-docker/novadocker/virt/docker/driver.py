@@ -370,7 +370,10 @@ class DockerDriver(driver.ComputeDriver):
 
         #get Image and image info.
         image_name = self._get_image_name(context, instance, image_meta)
-        image = self.docker.inspect_image(image_name)
+        try:
+            image = self.docker.inspect_image(image_name)
+        except errors.APIError:
+            image = None
         if not image:
             image = self._pull_missing_image(context, image_meta, instance)
 
