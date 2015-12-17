@@ -417,7 +417,6 @@ class DockerDriver(driver.ComputeDriver):
         return self.docker.create_container(image_name,
                                             name=self._encode_utf8(name),
                                             hostname=hostname,
-                                            mem_limit=mem_limit,
                                             cpu_shares=cpu_shares,
                                             cpuset=cpuset,
                                             network_disabled=network_disabled,
