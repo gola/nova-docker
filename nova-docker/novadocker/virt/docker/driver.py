@@ -174,6 +174,7 @@ class DockerDriver(driver.ComputeDriver):
             return
         container_id = self._get_container_id(instance)
         if not container_id:
+            LOG.warning('Container %s is not existed., attach vifs Failed.')
             return
         netns_path = '/var/run/netns'
         if not os.path.exists(netns_path):
