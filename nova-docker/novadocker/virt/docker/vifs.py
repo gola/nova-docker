@@ -318,8 +318,13 @@ class DockerGenericVIFDriver(object):
                 utils.execute('ip', 'netns', 'exec', container_id,
                               'ip', 'route', 'replace', 'default', 'via',
                               gateway, 'dev', if_remote_rename, run_as_root=True)
-                utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'route', 'add',
-                              '169.254.169.254/32', 'via', dhcp_server)
+                if dhcp_server:
+                    utils.execute('ip', 'netns', 'exec', container_id, 'ip', 'route', 'add',
+                                  '169.254.169.254/32', 'via', dhcp_server)
+                else:
+                    LOG.warning("Cloudinit Cloud not work for %s, no dhcp_server info "
+                                "in network meta." % container_id)
+
 
             # Disable TSO, for now no config option
             #utils.execute('ip', 'netns', 'exec', container_id, 'ethtool',

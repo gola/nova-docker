@@ -61,6 +61,9 @@ def get_ovs_interfaceid(vif):
 #Mars gu - add this host route for cloudinit.
 def find_dhcp_server(instance, network_info):
     for subnet in network_info['subnets']:
-        return subnet['meta']['dhcp_server']
+        if subnet['meta'].has_key('dhcp_server'):
+            return subnet['meta']['dhcp_server']
+        else:
+           return {}
     raise exception.InstanceDeployFailure(_('Cannot find DHCP Server'),
                                           instance_id=instance['uuid'])
