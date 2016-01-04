@@ -138,7 +138,7 @@ class DockerGenericVIFDriver(object):
                 utils.execute('ip', 'link', 'set', if_bridge, 'up', run_as_root=True)
                 utils.execute('brctl', 'addif', if_bridge, v1_name, run_as_root=True)
                 linux_net.create_ovs_vif_port(ovs_bridge,
-                                              v2_name, iface_id, vif['address'],
+                                              v2_name, vif['id'], vif['address'],
                                               instance['uuid'])
 
             if not linux_net.device_exists(if_local_name):
