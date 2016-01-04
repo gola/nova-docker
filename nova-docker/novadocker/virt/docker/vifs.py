@@ -115,11 +115,6 @@ class DockerGenericVIFDriver(object):
         if_bridge = 'qbr%s' % iface_id
         ovs_bridge = vif['network']['bridge']
 
-        # Device already exists so return.
-        if linux_net.device_exists(if_local_name):
-            return
-        undo_mgr = utils.UndoManager()
-
         try:
             if not linux_net.device_exists(if_bridge):
                 utils.execute('brctl', 'addbr', if_bridge, run_as_root=True)
@@ -250,6 +245,7 @@ class DockerGenericVIFDriver(object):
     def unplug_ovs_hybird(self, instance, vif):
         """Unplug the VIF by deleting the port from the ovs hybird ovs mode."""
         iface_id = vif['id'][:11]
+        if_local_name = 'tap%s' % iface_id
         v1_name = 'qvb%s' % iface_id
         v2_name = 'qvo%s' % iface_id
         if_bridge = 'qbr%s' % iface_id
@@ -260,7 +256,10 @@ class DockerGenericVIFDriver(object):
                 utils.execute('brctl', 'delif', if_bridge, v1_name, run_as_root=True)
                 utils.execute('ip', 'link', 'set', if_bridge, 'down', run_as_root=True)
                 utils.execute('brctl', 'delbr', if_bridge, run_as_root=True)
-           #del qvb port
+            #del tap veth pair
+            if linux_net.device_exists(if_local_name):
+                utils.execute('ip', 'link', 'delete', if_local_name, run_as_root=True)
+           #del qvb veth pair
             if linux_net.device_exists(v1_name):
                 utils.execute('ip', 'link', 'delete', v1_name, run_as_root=True)
             #ip link delete pair1
