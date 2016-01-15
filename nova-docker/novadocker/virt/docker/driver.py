@@ -367,8 +367,7 @@ class DockerDriver(driver.ComputeDriver):
             'mem_limit': self._get_memory_limit_bytes(instance),
             'cpu_shares': self._get_cpu_shares(instance),
             'cpuset': self._get_cpu_set(instance),
-            'network_disabled': True,
-            'network_mode': '',
+            'network_mode': 'none',
             'privileged': True,
         }
 
@@ -414,7 +413,6 @@ class DockerDriver(driver.ComputeDriver):
         #mem_limit = args.pop('mem_limit', None)
         cpu_shares = args.pop('cpu_shares', None)
         cpuset=args.pop('cpuset', None)
-        network_disabled = args.pop('network_disabled', False)
         environment = args.pop('environment', None)
         command = args.pop('command', None)
         host_config = docker_utils.create_host_config(**args)
@@ -423,7 +421,6 @@ class DockerDriver(driver.ComputeDriver):
                                             hostname=hostname,
                                             cpu_shares=cpu_shares,
                                             cpuset=cpuset,
-                                            network_disabled=network_disabled,
                                             environment=environment,
                                             command=command,
                                             host_config=host_config)
@@ -431,7 +428,13 @@ class DockerDriver(driver.ComputeDriver):
 
 
     def _start_container(self, container_id, instance, network_info=None):
-        self.docker.start(container_id)
+        #get update info
+        dns_list = network.find_dns(network_info)
+        if not dns_list:
+            dns_list = None
+        #self.docker.start(container_id)
+        self.docker.start(container_id, dns=dns_list, network_mode='none', privileged=True)
+
         if not network_info:
             return
         try:

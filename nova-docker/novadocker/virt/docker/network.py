@@ -52,6 +52,14 @@ def find_gateway(instance, network_info):
     raise exception.InstanceDeployFailure(_('Cannot find gateway'),
                                           instance_id=instance['uuid'])
 
+def find_dns(network_bare):
+    dns_list = []
+    for network_info in network_bare:
+        for subnet in network_info['subnets']:
+            for dns in subnet['dns']:
+                if dns['type'] == 'dns':
+                    dns_list.append(dns['address'])
+    return dns_list
 
 # NOTE(arosen) - this method should be removed after it's moved into the
 # linux_net code in nova.
