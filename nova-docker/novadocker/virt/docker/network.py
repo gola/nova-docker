@@ -55,7 +55,7 @@ def find_gateway(instance, network_info):
 def find_dns(network_bare):
     dns_list = []
     for network_info in network_bare:
-        for subnet in network_info['subnets']:
+        for subnet in network_info['network']['subnets']:
             for dns in subnet['dns']:
                 if dns['type'] == 'dns':
                     dns_list.append(dns['address'])
