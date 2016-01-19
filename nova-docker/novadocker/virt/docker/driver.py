@@ -395,6 +395,11 @@ class DockerDriver(driver.ComputeDriver):
             #FIXME: it's not nice to set all metadata to container env.
             #args['environment'] = nova_utils.instance_meta(instance)
 
+        dns_list = network.find_dns(network_info)
+        if not dns_list:
+            dns_list = None
+        args['dns'] = dns_list
+
         container_id = self._create_container(instance, image_name, args)
         if not container_id:
             raise exception.InstanceDeployFailure(
@@ -428,12 +433,8 @@ class DockerDriver(driver.ComputeDriver):
 
 
     def _start_container(self, container_id, instance, network_info=None):
-        #get update info
-        dns_list = network.find_dns(network_info)
-        if not dns_list:
-            dns_list = None
-        #self.docker.start(container_id)
-        self.docker.start(container_id, dns=dns_list, network_mode='none', privileged=True)
+        self.docker.start(container_id)
+        #self.docker.start(container_id, dns=dns_list, network_mode='none', privileged=True)
 
         if not network_info:
             return
