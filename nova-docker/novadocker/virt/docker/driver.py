@@ -35,6 +35,8 @@ from nova.i18n import _
 from nova.image import glance
 from nova.openstack.common import fileutils
 from nova.openstack.common import log
+from nova.openstack.common import excutils
+from nova.openstack.common import loopingcall
 from nova import utils
 from nova import utils as nova_utils
 from nova import objects
@@ -84,7 +86,10 @@ docker_opts = [
     cfg.StrOpt('docker_storage_type',
                default='device_mapper',
                help='Location where obligate for system, default value is -1. '
-                    'Support list : device_mapper/overlayfs')
+                    'Support list : device_mapper/overlayfs'),
+    cfg.BoolOpt('delete_migration_source',
+               default=False,
+                help='Migration Source Node delete the tar from snapshot dir.')
 ]
 
 CONF.register_opts(docker_opts, 'docker')
@@ -362,6 +367,30 @@ class DockerDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
+
+        #get Image and image info.
+        image_name = self._get_image_name(context, instance, image_meta)
+        try:
+            image_inspect_info = self.docker.inspect_image(image_name)
+        except errors.APIError:
+            image_inspect_info = None
+        if not image_inspect_info:
+            image_inspect_info = self._pull_missing_image(context, image_meta, instance)
+
+        self._tag_image_name(image_meta, image_name)
+
+        args = self._create_container_args(instance, image_meta, image_inspect_info, network_info, block_device_info)
+
+        container_id = self._create_container(instance, image_name, args)
+        if not container_id:
+            raise exception.InstanceDeployFailure(
+                _('Cannot create container'),
+                instance_id=instance['name'])
+
+        #self.resize_container_disk(instance, "test")
+        self._start_container(container_id, instance, network_info)
+
+    def _create_container_args(self, instance, image_meta, image_inspect_info, network_info=None, block_device_info=None):
         args = {
             'hostname': instance['hostname'],
             'mem_limit': self._get_memory_limit_bytes(instance),
@@ -371,18 +400,7 @@ class DockerDriver(driver.ComputeDriver):
             'privileged': True,
         }
 
-        #get Image and image info.
-        image_name = self._get_image_name(context, instance, image_meta)
-        try:
-            image = self.docker.inspect_image(image_name)
-        except errors.APIError:
-            image = None
-        if not image:
-            image = self._pull_missing_image(context, image_meta, instance)
-
-        #Workawound Image metadata(properties)
-        self._tag_image_name(image_meta, image_name)
-        if not (image and image['Config']['Cmd']):
+        if not (image_inspect_info and image_inspect_info['Config']['Cmd']):
             args['command'] = ['sh']
         # Glance command-line overrides any set in the Docker image
         if (image_meta and
@@ -400,14 +418,6 @@ class DockerDriver(driver.ComputeDriver):
             dns_list = None
         args['dns'] = dns_list
 
-        container_id = self._create_container(instance, image_name, args)
-        if not container_id:
-            raise exception.InstanceDeployFailure(
-                _('Cannot create container'),
-                instance_id=instance['name'])
-
-        #self.resize_container_disk(instance, "test")
-        self._start_container(container_id, instance, network_info)
 
     def _create_container(self, instance, image_name, args):
         #args stack from spawn:   hostname/mem_limit/cpu_shares/cpuset/network_disabled/command/env/privileged
@@ -664,3 +674,116 @@ class DockerDriver(driver.ComputeDriver):
     def log_dict(self, d):
         for k,v in d.iteritems():
             LOG.debug("%s : %s" % (k,v))
+
+
+    ##################################################################################
+    #Migrate                                                                         #
+    ##################################################################################
+    def migrate_disk_and_power_off(self, context, instance, dest,
+                                   flavor, network_info,
+                                   block_device_info=None,
+                                   timeout=0, retry_interval=0):
+        LOG.debug("Starting migrate_disk_and_power_off",
+                   instance=instance)
+        container_id = self._get_container_id(instance)
+        snapshot_directory = CONF.docker.snapshots_directory
+        migrate_src = snapshot_directory + '/migrate_src/'
+        migrate_dest = snapshot_directory + '/migrate_dest/'
+
+        # Checks if the migration needs a disk resize down.
+        for kind in ('root_gb', 'ephemeral_gb'):
+            if flavor[kind] < instance[kind]:
+                reason = _("Unable to resize disk down.")
+                raise exception.InstanceFaultRollback(
+                    exception.ResizeError(reason=reason))
+
+        try:
+            #TODO export or commit the contaienr to a dir
+            #commit to migrate_src
+            utils.execute('mkdir', '-p', migrate_src)
+            self.docker.commit(container = container_id, repository= instance['name'], tag='latest')
+            image = self.docker.get_image(image=instance['name'])
+            image_tar_name = migrate_src + instance['name']+ '.tar'
+            image_tar = open(image_tar_name, 'w')
+            image_tar.write(image.data)
+            image_tar.close()
+
+            #Stop the Container
+            self.power_off(instance, timeout, retry_interval)
+
+            #todo copy the image
+            hostutils.copy_image(migrate_src, migrate_dest, host=dest)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self._cleanup_migration(dest, image_tar_name, image_name = instance['name'])
+
+        return None
+
+
+    def _cleanup_migration(self, migrate_src, image_name):
+        """Used only for cleanup in case migrate_disk_and_power_off fails."""
+        try:
+            if os.path.exists(migrate_src):
+                utils.execute('rm', '-rf', migrate_src)
+            self.docker.remove_image(image_name)
+        except Exception:
+            pass
+
+    def finish_migration(self, context, migration, instance, disk_info,
+                         network_info, image_meta, resize_instance,
+                         block_device_info=None, power_on=True):
+        LOG.debug("Starting finish_migration", instance=instance)
+
+        snapshot_directory = CONF.docker.snapshots_directory
+        migrate_dest = snapshot_directory + '/migrate_dest/'
+        image_name = instance['name']
+        image_tar_name = migrate_dest + image_name + '.tar'
+
+        #get Image and image info
+        self.docker.load_repository_file(
+                    self._encode_utf8(image_meta['name']),
+                    image_tar_name
+                )
+        image_inspect_info = self.docker.inspect_image(image_name)
+
+        args = self._create_container_args(instance, image_meta, image_inspect_info, network_info, block_device_info)
+        container_id = self._create_container(instance, image_name, args)
+        if not container_id:
+            raise exception.InstanceDeployFailure(
+                _('Cannot create container'),
+                instance_id=instance['name'])
+
+        #self.resize_container_disk(instance, "test")
+        self._start_container(container_id, instance, network_info)
+
+    def confirm_migration(self, migration, instance, network_info):
+        """Confirms a resize, destroying the source VM."""
+        self._cleanup_resize(instance, network_info)
+
+    def _cleanup_resize(self, instance, network_info):
+        # NOTE(wangpan): we get the pre-grizzly instance path firstly,
+        #                so the backup dir of pre-grizzly instance can
+        #                be deleted correctly with grizzly or later nova.
+        delete_migration_source = CONF.docker.delete_migration_source
+        snapshot_directory = CONF.docker.snapshots_directory
+        if not delete_migration_source:
+            return
+        migrate_src = snapshot_directory + '/migrate_src/'
+        image_name = instance['name']
+        image_tar_name = migrate_src + image_name + '.tar'
+
+        utils.execute('rm', '-rf', image_tar_name, delay_on_retry=True,
+                          attempts=5)
+
+    def finish_revert_migration(self, context, instance, network_info,
+                                block_device_info=None, power_on=True):
+        LOG.debug("Starting finish_revert_migration",
+                  instance=instance)
+
+        image_name = instance['name']
+        image_inspect_info = self.docker.inspect_image(image_name)
+        image_meta = None
+        args = self._create_container_args(instance, image_meta, image_inspect_info, network_info, block_device_info)
+        container_id = self._create_container(instance, image_name, args)
+        #self.resize_container_disk(instance, "test")
+        self._start_container(container_id, instance, network_info)
