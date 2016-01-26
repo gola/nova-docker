@@ -401,7 +401,7 @@ class DockerDriver(driver.ComputeDriver):
         }
 
         if not (image_inspect_info and image_inspect_info['Config']['Cmd']):
-            args['command'] = ['sh']
+            args['command'] = 'sh -c "while true;do sleep 10;done"'
         # Glance command-line overrides any set in the Docker image
         if (image_meta and
                 image_meta.get('properties', {}).get('os_command_line')):
@@ -417,6 +417,8 @@ class DockerDriver(driver.ComputeDriver):
         if not dns_list:
             dns_list = None
         args['dns'] = dns_list
+
+        return args
 
 
     def _create_container(self, instance, image_name, args):
@@ -741,7 +743,7 @@ class DockerDriver(driver.ComputeDriver):
 
         #get Image and image info
         self.docker.load_repository_file(
-                    self._encode_utf8(image_meta['name']),
+                    image_name,
                     image_tar_name
                 )
         image_inspect_info = self.docker.inspect_image(image_name)
@@ -787,3 +789,7 @@ class DockerDriver(driver.ComputeDriver):
         container_id = self._create_container(instance, image_name, args)
         #self.resize_container_disk(instance, "test")
         self._start_container(container_id, instance, network_info)
+
+    @staticmethod
+    def get_host_ip_addr():
+        return CONF.my_ip
