@@ -700,7 +700,6 @@ class DockerDriver(driver.ComputeDriver):
                     exception.ResizeError(reason=reason))
 
         try:
-            #TODO export or commit the contaienr to a dir
             #commit to migrate_src
             utils.execute('mkdir', '-p', migrate_src)
             self.docker.commit(container = container_id, repository= instance['name'], tag='latest')
@@ -713,7 +712,7 @@ class DockerDriver(driver.ComputeDriver):
             #Stop the Container
             self.power_off(instance, timeout, retry_interval)
 
-            #todo copy the image
+
             hostutils.copy_image(migrate_src, migrate_dest, host=dest)
         except Exception:
             with excutils.save_and_reraise_exception():
@@ -792,13 +791,7 @@ class DockerDriver(driver.ComputeDriver):
         LOG.debug("Starting finish_revert_migration",
                   instance=instance)
 
-        image_name = instance['name']
-        image_inspect_info = self.docker.inspect_image(image_name)
-        image_meta = None
-        args = self._create_container_args(instance, image_meta, image_inspect_info, network_info, block_device_info)
-        container_id = self._create_container(instance, image_name, args)
-        #self.resize_container_disk(instance, "test")
-        self._start_container(container_id, instance, network_info)
+        self.power_on(None, instance, network_info, None)
 
     @staticmethod
     def get_host_ip_addr():
