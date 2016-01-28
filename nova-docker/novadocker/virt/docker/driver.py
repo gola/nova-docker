@@ -768,23 +768,24 @@ class DockerDriver(driver.ComputeDriver):
         # NOTE(wangpan): we get the pre-grizzly instance path firstly,
         #                so the backup dir of pre-grizzly instance can
         #                be deleted correctly with grizzly or later nova.
-        delete_migration_source = CONF.docker.delete_migration_source
-        snapshot_directory = CONF.docker.snapshots_directory
-        if not delete_migration_source:
-            return
-        migrate_src = snapshot_directory + '/migrate_src/'
-        image_name = instance['name']
-        image_tar_name = migrate_src + image_name + '.tar'
-
-        utils.execute('rm', '-rf', image_tar_name, delay_on_retry=True,
-                          attempts=5)
-
         container_id = self._get_container_id(instance)
         if not container_id:
             return
         self._stop_container(container_id, instance, 10)
         self.docker.remove_container(container_id, force=True)
         self._network_delete(instance, network_info, container_id)
+
+
+        delete_migration_source = CONF.docker.delete_migration_source
+        if not delete_migration_source:
+            return
+        snapshot_directory = CONF.docker.snapshots_directory
+        migrate_src = snapshot_directory + '/migrate_src/'
+        image_name = instance['name']
+        image_tar_name = migrate_src + image_name + '.tar'
+        utils.execute('rm', '-rf', image_tar_name, delay_on_retry=True,
+                          attempts=5)
+
 
     def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):
