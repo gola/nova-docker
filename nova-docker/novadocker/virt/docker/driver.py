@@ -757,6 +757,8 @@ class DockerDriver(driver.ComputeDriver):
 
         #self.resize_container_disk(instance, "test")
         self._start_container(container_id, instance, network_info)
+        utils.execute('rm', '-rf', image_tar_name, delay_on_retry=True,
+                          attempts=5)
 
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
@@ -777,6 +779,13 @@ class DockerDriver(driver.ComputeDriver):
         utils.execute('rm', '-rf', image_tar_name, delay_on_retry=True,
                           attempts=5)
 
+        container_id = self._get_container_id(instance)
+        if not container_id:
+            return
+        self._stop_container(container_id, instance, 10)
+        self.docker.remove_container(container_id, force=True)
+        self._network_delete(instance, network_info, container_id)
+
     def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):
         LOG.debug("Starting finish_revert_migration",
@@ -793,3 +802,6 @@ class DockerDriver(driver.ComputeDriver):
     @staticmethod
     def get_host_ip_addr():
         return CONF.my_ip
+
+    def get_volume_connector(self, instance):
+        pass
