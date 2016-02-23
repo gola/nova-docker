@@ -438,8 +438,8 @@ class DockerDriver(driver.ComputeDriver):
 
 
     def _create_container(self, instance, image_name, args):
-        #args stack from spawn:   hostname/mem_limit/cpu_shares/cpuset/network_disabled/command/env/privileged
-        #args maybe set in host_config:  privileged
+        #args stack from spawn:   hostname/cpu_shares/cpuset/command/env
+        #args maybe set in host_config:  privileged/mem_limit/network_mode/dns
         name = instance['name']
         hostname = args.pop('hostname', None)
         #mem_limit has been moved to host_config in API version 1.19
@@ -461,8 +461,21 @@ class DockerDriver(driver.ComputeDriver):
 
 
     def _start_container(self, container_id, instance, network_info=None):
-        self.docker.start(container_id)
-        #self.docker.start(container_id, dns=dns_list, network_mode='none', privileged=True)
+        #get mem_list/network_mode/privileged/dns/cpuset/cpu_shares
+        mem_limit = self._get_memory_limit_bytes(instance)
+        network_mode = 'none'
+        privileged = True
+        dns_list = network.find_dns(network_info)
+        if not dns_list:
+            dns_list = None
+        cpu_shares = self._get_cpu_shares(instance)
+        cpuset = self._get_cpu_set(instance)
+
+        #self.docker.start(container_id)
+        self.docker.update_start(container_id, mem_limit=mem_limit,
+            network_mode=network_mode, privileged=privileged ,
+            dns=dns_list, cpu_shares=cpu_shares, cpuset=cpuset)
+
 
         if not network_info:
             return
