@@ -71,6 +71,9 @@ docker_opts = [
                default='$instances_path/snapshots',
                help='Location where docker driver will temporarily store '
                     'snapshots.'),
+    cfg.StrOpt('dir_volume_path',
+               default='/os_log/containers_dir_volume/',
+               help='Location where container volume mounted.'),
     cfg.BoolOpt('privileged',
                 default=True,
                 help='Set true can own all root privileges in a container.'),
@@ -339,11 +342,16 @@ class DockerDriver(driver.ComputeDriver):
             image_id = image_meta_uuid[0:8] + image_meta_uuid[9:13]
             self.docker.tag(image_id, repository=image_name)
 
+    def _get_dir_volume(self, image_meta):
+        dir_volume = None
+        if (image_meta and image_meta.get('properties', {}).get('dir_volume')):
+            dir_volume = image_meta['properties'].get('dir_volume')
+        return dir_volume
+
     def _pull_missing_image(self, context, image_meta, instance):
         msg = 'Image name "%s" does not exist, fetching it...'
         LOG.debug(msg % image_meta['name'])
 
-        # TODO(imain): It would be nice to do this with file like object
         # passing but that seems a bit complex right now.
         snapshot_directory = CONF.docker.snapshots_directory
         #if snapshot is not existed,create it.
@@ -417,6 +425,14 @@ class DockerDriver(driver.ComputeDriver):
         if not dns_list:
             dns_list = None
         args['dns'] = dns_list
+
+        dir_volume = self._get_dir_volume(image_meta)
+        if dir_volume:
+            host_dir = CONF.dir_volume_path
+            base_name = os.path.basename(dir_volume)
+            bind = host_dir + base_name
+            name = instance['name']
+
 
         return args
 
