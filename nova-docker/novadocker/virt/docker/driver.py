@@ -72,7 +72,7 @@ docker_opts = [
                help='Location where docker driver will temporarily store '
                     'snapshots.'),
     cfg.StrOpt('dir_volume_path',
-               default='/os_log/containers_dir_volume/',
+               default='/os_docker_volume',
                help='Location where container volume mounted.'),
     cfg.BoolOpt('privileged',
                 default=True,
@@ -343,10 +343,21 @@ class DockerDriver(driver.ComputeDriver):
             self.docker.tag(image_id, repository=image_name)
 
     def _get_dir_volume(self, image_meta):
-        dir_volume = None
-        if (image_meta and image_meta.get('properties', {}).get('dir_volume')):
-            dir_volume = image_meta['properties'].get('dir_volume')
-        return dir_volume
+        ret = None
+        log_volume = None
+        data_volume= None
+        other_volume=None
+
+        if image_meta:
+            if image_meta.get('properties', {}).get('log_volume'):
+                log_volume = image_meta['properties'].get('log_volume')
+            elif image_meta.get('properties', {}).get('data_volume'):
+                data_volume = image_meta['properties'].get('data_volume')
+            elif image_meta.get('properties', {}).get('other_volume'):
+                other_volume = image_meta['properties'].get('other_volume')
+
+        ret =  {"log_volume" : log_volume, "data_volume" : data_volume, "other_volume" : other_volume}
+        return ret
 
     def _pull_missing_image(self, context, image_meta, instance):
         msg = 'Image name "%s" does not exist, fetching it...'
@@ -387,6 +398,17 @@ class DockerDriver(driver.ComputeDriver):
 
         self._tag_image_name(image_meta, image_name)
 
+        self._create_volume_containers()
+        dir_volumes = self._get_dir_volume(image_meta)
+        if dir_volumes:
+            name = instance['name']
+            host_dir = CONF.dir_volume_path
+            log_volume = dir_volumes['log_volume']
+            data_volume = dir_volumes['data_volume']
+            other_volume = dir_volumes['other_volume']
+
+            if log_volume:
+
         args = self._create_container_args(instance, image_meta, image_inspect_info, network_info, block_device_info)
 
         container_id = self._create_container(instance, image_name, args)
@@ -426,16 +448,20 @@ class DockerDriver(driver.ComputeDriver):
             dns_list = None
         args['dns'] = dns_list
 
-        dir_volume = self._get_dir_volume(image_meta)
-        if dir_volume:
-            host_dir = CONF.dir_volume_path
-            base_name = os.path.basename(dir_volume)
-            bind = host_dir + base_name
-            name = instance['name']
-
-
         return args
 
+    def _create_volume_containers(self, instance, image_meta):
+        dir_volumes = self._get_dir_volume(image_meta)
+        if not dir_volumes:
+            return
+
+        nova_name = instance['name']
+        host_dir = CONF.dir_volume_path
+        log_volume = dir_volumes['log_volume']
+        data_volume = dir_volumes['data_volume']
+        other_volume = dir_volumes['other_volume']
+
+        # client.create_container("oslayer:v0.9", name="hello6", volumes=['/home/gukai'], host_config = client.create_host_config(binds=['/home/gukai:/home/gukai']))
 
     def _create_container(self, instance, image_name, args):
         #args stack from spawn:   hostname/cpu_shares/cpuset/command/env
