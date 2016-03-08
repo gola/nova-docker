@@ -44,6 +44,7 @@ from nova.virt import driver
 from nova.virt import images
 from novadocker.virt.docker import client as docker_client
 from novadocker.virt.docker import hostinfo
+from novadocker.virt.docker import host_monitor
 from novadocker.virt.docker import cpuset_info
 from novadocker.virt.docker import network
 from novadocker.virt import hostutils
@@ -748,6 +749,26 @@ class DockerDriver(driver.ComputeDriver):
 
     def get_host_uptime(self, host):
         return hostutils.sys_uptime()
+
+    def get_monitor_info(self, host):
+        # add by liuhaibin for get host information 2016-3-1
+        """ get information
+        :return: A dict
+        """
+        monitor_info = {}
+        cpu_info = host_monitor.get_cpu_info()
+        mem_info = host_monitor.get_mem_info()
+        disk_info = host_monitor.get_disk_info()
+        bios_info = host_monitor.get_bios_info()
+        chassis_info = host_monitor.get_chassis_info()
+        soft_info = host_monitor.get_software_info()
+        monitor_info["cpu_info"] = cpu_info
+        monitor_info["mem_info"] = mem_info
+        monitor_info["disk_info"] = disk_info
+        monitor_info["bios_info"] = bios_info
+        monitor_info["chassis_info"] = chassis_info
+        monitor_info["soft_info"] = soft_info
+        return monitor_info
 
     def _encode_utf8(self, value):
         return unicode(value).encode('utf-8')
