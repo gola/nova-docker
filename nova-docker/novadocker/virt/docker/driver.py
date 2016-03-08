@@ -398,18 +398,11 @@ class DockerDriver(driver.ComputeDriver):
 
         self._tag_image_name(image_meta, image_name)
 
-        self._create_volume_containers()
-        dir_volumes = self._get_dir_volume(image_meta)
-        if dir_volumes:
-            name = instance['name']
-            host_dir = CONF.dir_volume_path
-            log_volume = dir_volumes['log_volume']
-            data_volume = dir_volumes['data_volume']
-            other_volume = dir_volumes['other_volume']
-
-            if log_volume:
-
         args = self._create_container_args(instance, image_meta, image_inspect_info, network_info, block_device_info)
+        hava_vol = self._create_volume_containers(instance, image_name, image_meta)
+        if hava_vol:
+            vol_ct_name =  instance['name'] + '_vol'
+            args['volumes_from'] = vol_ct_name
 
         container_id = self._create_container(instance, image_name, args)
         if not container_id:
@@ -450,22 +443,44 @@ class DockerDriver(driver.ComputeDriver):
 
         return args
 
-    def _create_volume_containers(self, instance, image_meta):
+    def _create_volume_containers(self, instance, image_name, image_meta):
         dir_volumes = self._get_dir_volume(image_meta)
         if not dir_volumes:
-            return
+            return False
 
         nova_name = instance['name']
+        vol_ct_name = nova_name + '_vol'
         host_dir = CONF.dir_volume_path
+        all_volumes = []
+        all_binds = []
+
         log_volume = dir_volumes['log_volume']
         data_volume = dir_volumes['data_volume']
         other_volume = dir_volumes['other_volume']
 
-        # client.create_container("oslayer:v0.9", name="hello6", volumes=['/home/gukai'], host_config = client.create_host_config(binds=['/home/gukai:/home/gukai']))
+        if log_volume:
+            log_host_dir = host_dir + '/log/' + nova_name
+            log_bind = log_host_dir + ':' + log_volume
+            all_volumes.append(log_volume)
+            all_binds.append(log_bind)
+        if data_volume:
+            data_host_dir = host_dir + '/data/' + nova_name
+            data_bind = data_host_dir + ':' + data_volume
+            all_volumes.append(data_volume)
+            all_binds.append(data_bind)
+        if other_volume:
+            other_host_dir = host_dir + '/other/' + nova_name
+            other_bind = other_host_dir + ':' + other_volume
+            all_volumes.append(other_volume)
+            all_binds.append(other_bind)
+
+        self.docker.create_container(image_name, name=vol_ct_name, volumes=all_volumes,
+                                     binds=self.docker.create_host_config(binds=all_binds))
+        return True
 
     def _create_container(self, instance, image_name, args):
         #args stack from spawn:   hostname/cpu_shares/cpuset/command/env
-        #args maybe set in host_config:  privileged/mem_limit/network_mode/dns
+        #args maybe set in host_config:  privileged/mem_limit/network_mode/dns/volumes_from
         name = instance['name']
         hostname = args.pop('hostname', None)
         #mem_limit has been moved to host_config in API version 1.19
