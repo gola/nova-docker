@@ -476,9 +476,15 @@ class DockerDriver(driver.ComputeDriver):
             all_volumes.append(other_volume)
             all_binds.append(other_bind)
 
-        self.docker.create_container(image_name, name=vol_ct_name, volumes=all_volumes,
+        self.docker.create_container(image_name, name=vol_ct_name, network_disabled=True,volumes=all_volumes,
                                      host_config=self.docker.create_host_config(binds=all_binds))
         return True
+
+    def _destroy_volume_container(self,instance):
+        nova_name = instance['name']
+        vol_ct_name = nova_name + '_vol'
+        if self._exist_container(vol_ct_name):
+            self.docker.remove_container(vol_ct_name, force=True)
 
     def _create_container(self, instance, image_name, args):
         #args stack from spawn:   hostname/cpu_shares/cpuset/command/env
@@ -580,6 +586,7 @@ class DockerDriver(driver.ComputeDriver):
         self._stop_container(container_id, instance, 10)
         self.cleanup(context, instance, network_info,
                      block_device_info, destroy_disks)
+        self._destroy_volume_container(instance)
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
