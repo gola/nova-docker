@@ -354,9 +354,9 @@ class DockerDriver(driver.ComputeDriver):
         if image_meta:
             if image_meta.get('properties', {}).get('log_volume'):
                 log_volume = image_meta['properties'].get('log_volume')
-            elif image_meta.get('properties', {}).get('data_volume'):
+            if image_meta.get('properties', {}).get('data_volume'):
                 data_volume = image_meta['properties'].get('data_volume')
-            elif image_meta.get('properties', {}).get('other_volume'):
+            if image_meta.get('properties', {}).get('other_volume'):
                 other_volume = image_meta['properties'].get('other_volume')
 
         ret =  {"log_volume" : log_volume, "data_volume" : data_volume, "other_volume" : other_volume}
@@ -448,18 +448,17 @@ class DockerDriver(driver.ComputeDriver):
 
     def _create_volume_containers(self, instance, image_name, image_meta):
         dir_volumes = self._get_dir_volume(image_meta)
-        if not dir_volumes:
+        log_volume = dir_volumes['log_volume']
+        data_volume = dir_volumes['data_volume']
+        other_volume = dir_volumes['other_volume']
+        if not log_volume and not data_volume and not other_volume:
             return False
 
         nova_name = instance['name']
         vol_ct_name = nova_name + '_vol'
-        host_dir = CONF.dir_volume_path
+        host_dir = CONF.docker.dir_volume_path
         all_volumes = []
         all_binds = []
-
-        log_volume = dir_volumes['log_volume']
-        data_volume = dir_volumes['data_volume']
-        other_volume = dir_volumes['other_volume']
 
         if log_volume:
             log_host_dir = host_dir + '/log/' + nova_name
@@ -478,7 +477,7 @@ class DockerDriver(driver.ComputeDriver):
             all_binds.append(other_bind)
 
         self.docker.create_container(image_name, name=vol_ct_name, volumes=all_volumes,
-                                     binds=self.docker.create_host_config(binds=all_binds))
+                                     host_config=self.docker.create_host_config(binds=all_binds))
         return True
 
     def _create_container(self, instance, image_name, args):
@@ -515,7 +514,7 @@ class DockerDriver(driver.ComputeDriver):
 
         volumes_from = None
         vol_ct_name =  instance['name'] + '_vol'
-        if self._exist_container(self, vol_ct_name):
+        if self._exist_container(vol_ct_name):
             volumes_from = vol_ct_name
 
         #self.docker.start(container_id)
