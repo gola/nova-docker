@@ -135,6 +135,12 @@ class DockerDriver(driver.ComputeDriver):
             res.append(container['Names'][0][1:])
         return res
 
+    def _exist_container(self,container_name):
+        for container in self.docker.containers(all=True):
+            if container['Names'][0][1:] == container_name:
+                return True
+
+        return False
 
     def resize_container_disk(self, instance, disk_info):
         storage_type = CONF.docker.docker_storage_type
@@ -170,7 +176,6 @@ class DockerDriver(driver.ComputeDriver):
         """Detach an interface from the container."""
         self.vif_driver.unplug(instance, vif)
 
-
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
         for vif in network_info:
@@ -203,7 +208,6 @@ class DockerDriver(driver.ComputeDriver):
         for vif in network_info:
             self.vif_driver.attach(instance, vif, container_id)
 
-
     def unplug_vifs(self, instance, network_info):
         """Unplug VIFs from networks."""
         for vif in network_info:
@@ -221,7 +225,6 @@ class DockerDriver(driver.ComputeDriver):
             if e.response.status_code != 404:
                 raise
         return {}
-
 
     def get_info(self, instance):
         container = self._find_container_by_name(instance['name'])
@@ -499,8 +502,6 @@ class DockerDriver(driver.ComputeDriver):
                                             command=command,
                                             host_config=host_config)
 
-
-
     def _start_container(self, container_id, instance, network_info=None):
         #get mem_list/network_mode/privileged/dns/cpuset/cpu_shares
         mem_limit = self._get_memory_limit_bytes(instance)
@@ -512,11 +513,16 @@ class DockerDriver(driver.ComputeDriver):
         cpu_shares = self._get_cpu_shares(instance)
         cpuset = self._get_cpu_set(instance)
 
+        volumes_from = None
+        vol_ct_name =  instance['name'] + '_vol'
+        if self._exist_container(self, vol_ct_name):
+            volumes_from = vol_ct_name
+
         #self.docker.start(container_id)
         self.docker.update_start(container_id, mem_limit=mem_limit,
             network_mode=network_mode, privileged=privileged ,
-            dns=dns_list, cpu_shares=cpu_shares, cpuset=cpuset)
-
+            dns=dns_list, cpu_shares=cpu_shares, cpuset=cpuset,
+            volumes_from=volumes_from)
 
         if not network_info:
             return
@@ -732,10 +738,7 @@ class DockerDriver(driver.ComputeDriver):
                     set_str = set_str  +  ',' +  cpu[3:]
                 return set_str
             else:
-               return
-
-
-
+                return
 
     def get_host_uptime(self, host):
         return hostutils.sys_uptime()
