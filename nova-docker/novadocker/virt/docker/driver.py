@@ -485,7 +485,18 @@ class DockerDriver(driver.ComputeDriver):
         nova_name = instance['name']
         vol_ct_name = nova_name + '_vol'
         if self._exist_container(vol_ct_name):
-            self.docker.remove_container(vol_ct_name, force=True)
+            self.docker.remove_container(vol_ct_name, force=True, v=True)
+            host_dir = CONF.docker.dir_volume_path
+            log_host_dir = host_dir + '/log/' + nova_name
+            data_host_dir = host_dir + '/data/' + nova_name
+            other_host_dir = host_dir + '/other/' + nova_name
+
+            if os.path.isdir(log_host_dir):
+                __import__('shutil').rmtree(log_host_dir)
+            if os.path.isdir(data_host_dir):
+                __import__('shutil').rmtree(data_host_dir)
+            if os.path.isdir(other_host_dir):
+                __import__('shutil').rmtree(other_host_dir)
 
     def _create_container(self, instance, image_name, args):
         #args stack from spawn:   hostname/cpu_shares/cpuset/command/env
@@ -526,7 +537,7 @@ class DockerDriver(driver.ComputeDriver):
 
         #self.docker.start(container_id)
         self.docker.update_start(container_id, mem_limit=mem_limit,
-            network_mode=network_mode, privileged=privileged ,
+            network_mode=network_mode, privileged=privileged,
             dns=dns_list, cpu_shares=cpu_shares, cpuset=cpuset,
             volumes_from=volumes_from)
 
