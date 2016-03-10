@@ -220,8 +220,9 @@ class DockerDriver(driver.ComputeDriver):
     def _find_container_by_name(self, name):
         try:
             containers = self.docker.containers(all=True, filters={'name': name})
-            if containers:
-                return self.docker.inspect_container(containers[0]['Id'])
+            for ct in containers:
+                if ct and ct['Names'][0][1:] == name:
+                    return self.docker.inspect_container(ct[0]['Id'])
         except errors.APIError as e:
             if e.response.status_code != 404:
                 raise
