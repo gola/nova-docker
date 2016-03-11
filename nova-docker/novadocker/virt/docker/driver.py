@@ -927,7 +927,7 @@ class ContainerUtils(object):
         return self._docker
 
     def get_container_id(self, instance):
-       return self._find_container_by_name(instance['name']).get('Id')
+       return self.find_container_by_name(instance['name']).get('Id')
 
     def find_container_by_name(self, name):
         try:

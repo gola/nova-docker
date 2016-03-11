@@ -143,6 +143,7 @@ class DockerGenericVIFDriver(object):
                     container_id = self._container_utils.get_container_id(instance)
                     ct_netinfo = utils.execute('ip','netns','exec', container_id, 'ip' , 'link', 'show')[0]
                     if if_local_name not in ct_netinfo and 'eth0' not in ct_netinfo:
+                        LOG.warning('Mars Gu Try to delete tap device to fix the network error.')
                         utils.execute('ip', 'link', 'delete', if_local_name, run_as_root=True)
 
             if not linux_net.device_exists(if_local_name):
