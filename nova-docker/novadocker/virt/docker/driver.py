@@ -911,3 +911,31 @@ class DockerDriver(driver.ComputeDriver):
 
     def get_volume_connector(self, instance):
         pass
+
+
+class ContainerUtils(object):
+    """ tools for container """
+    def __init__(self):
+        self._docker = None
+
+    @property
+    def docker(self):
+        if self._docker is None:
+            self._docker = docker_client.DockerHTTPClient(CONF.docker.host_url,
+                                                          api_version=CONF.docker.api_version,
+                                                          api_timeout=CONF.docker.api_timeout)
+        return self._docker
+
+    def get_container_id(self, instance):
+       return self._find_container_by_name(instance['name']).get('Id')
+
+    def find_container_by_name(self, name):
+        try:
+            containers = self.docker.containers(all=True, filters={'name': name})
+            for ct in containers:
+                if ct and ct['Names'][0][1:] == name:
+                    return self.docker.inspect_container(ct['Id'])
+        except errors.APIError as e:
+            if e.response.status_code != 404:
+                raise
+        return {}

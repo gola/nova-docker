@@ -25,6 +25,7 @@ from nova.openstack.common import processutils
 from nova import utils
 from novadocker.virt.docker import network
 from oslo.config import cfg
+from novadocker.virt.docker.driver import ContainerUtils
 import random
 
 # We need config opts from manager, but pep8 complains, this silences it.
@@ -51,6 +52,8 @@ LOG = logging.getLogger(__name__)
 
 
 class DockerGenericVIFDriver(object):
+    def __init__(self):
+        self._container_utils = ContainerUtils()
 
     def plug(self, instance, vif):
         vif_type = vif['type']
@@ -136,9 +139,13 @@ class DockerGenericVIFDriver(object):
                                               v2_name, vif['id'], vif['address'],
                                               instance['uuid'])
 
-            if not linux_net.device_exists(if_local_name) or not linux_net.device_exists(if_remote_name):
-                if linux_net.device_exists(if_local_name):
-                    utils.execute('ip', 'link', 'delete', if_local_name, run_as_root=True)
+            if linux_net.device_exists(if_local_name) and not linux_net.device_exists(if_remote_name):
+                    container_id = self._container_utils.get_container_id(instance)
+                    ct_netinfo = utils.execute('ip','netns','exec', container_id, 'ip' , 'link', 'show')[0]
+                    if if_local_name not in ct_netinfo and 'eth0' not in ct_netinfo:
+                        utils.execute('ip', 'link', 'delete', if_local_name, run_as_root=True)
+
+            if not linux_net.device_exists(if_local_name):
                 utils.execute('ip', 'link', 'add', 'name', if_local_name, 'type',
                               'veth', 'peer', 'name', if_remote_name,
                               run_as_root=True)
