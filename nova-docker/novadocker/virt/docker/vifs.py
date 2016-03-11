@@ -136,7 +136,9 @@ class DockerGenericVIFDriver(object):
                                               v2_name, vif['id'], vif['address'],
                                               instance['uuid'])
 
-            if not linux_net.device_exists(if_local_name):
+            if not linux_net.device_exists(if_local_name) or not linux_net.device_exists(if_remote_name):
+                if linux_net.device_exists(if_local_name):
+                    utils.execute('ip', 'link', 'delete', if_local_name, run_as_root=True)
                 utils.execute('ip', 'link', 'add', 'name', if_local_name, 'type',
                               'veth', 'peer', 'name', if_remote_name,
                               run_as_root=True)
