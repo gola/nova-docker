@@ -45,6 +45,15 @@ def find_fixed_ip(instance, network_info):
     raise exception.InstanceDeployFailure(_('Cannot find fixed ip'),
                                           instance_id=instance['uuid'])
 
+def find_first_ip(instance, network_info_base):
+    network_info = network_info_base[0]['network']
+    for subnet in network_info['subnets']:
+        for ip in subnet['ips']:
+            if ip['type'] == 'fixed' and ip['address']:
+                return ip['address']
+    raise exception.InstanceDeployFailure(_('Cannot find first ip'),
+                                          instance_id=instance['uuid'])
+
 
 def find_gateway(instance, network_info):
     for subnet in network_info['subnets']:

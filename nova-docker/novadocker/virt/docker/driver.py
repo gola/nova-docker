@@ -404,7 +404,7 @@ class DockerDriver(driver.ComputeDriver):
         self._tag_image_name(image_meta, image_name)
 
         args = self._create_container_args(instance, image_meta, image_inspect_info, network_info, block_device_info)
-        hava_vol = self._create_volume_containers(instance, image_name, image_meta)
+        hava_vol = self._create_volume_containers(instance, image_name, image_meta, network_info)
         if hava_vol:
             vol_ct_name =  instance['name'] + '_vol'
             args['volumes_from'] = vol_ct_name
@@ -448,7 +448,7 @@ class DockerDriver(driver.ComputeDriver):
 
         return args
 
-    def _create_volume_containers(self, instance, image_name, image_meta):
+    def _create_volume_containers(self, instance, image_name, image_meta, network_info=None):
         dir_volumes = self._get_dir_volume(image_meta)
         log_volume = dir_volumes['log_volume']
         data_volume = dir_volumes['data_volume']
@@ -457,6 +457,7 @@ class DockerDriver(driver.ComputeDriver):
             return False
 
         nova_name = instance['name']
+        first_ip = network.find_first_ip(instance, network_info)
         vol_ct_name = nova_name + '_vol'
         host_dir = CONF.docker.dir_volume_path
         all_volumes = []
@@ -464,16 +465,16 @@ class DockerDriver(driver.ComputeDriver):
 
         if log_volume:
             log_host_dir = host_dir + '/log/' + nova_name
-            log_bind = log_host_dir + ':' + log_volume
+            log_bind = log_host_dir + ':' + log_volume + '_' + first_ip
             all_volumes.append(log_volume)
             all_binds.append(log_bind)
         if data_volume:
-            data_host_dir = host_dir + '/data/' + nova_name
+            data_host_dir = host_dir + '/data/' + nova_name + '_' + first_ip
             data_bind = data_host_dir + ':' + data_volume
             all_volumes.append(data_volume)
             all_binds.append(data_bind)
         if other_volume:
-            other_host_dir = host_dir + '/other/' + nova_name
+            other_host_dir = host_dir + '/other/' + nova_name + '_' + first_ip
             other_bind = other_host_dir + ':' + other_volume
             all_volumes.append(other_volume)
             all_binds.append(other_bind)
@@ -482,15 +483,16 @@ class DockerDriver(driver.ComputeDriver):
                                      host_config=self.docker.create_host_config(binds=all_binds))
         return True
 
-    def _destroy_volume_container(self,instance):
+    def _destroy_volume_container(self,instance, network_info=None):
         nova_name = instance['name']
+        first_ip = network.find_first_ip(instance, network_info)
         vol_ct_name = nova_name + '_vol'
         if self._exist_container(vol_ct_name):
             self.docker.remove_container(vol_ct_name, force=True, v=True)
             host_dir = CONF.docker.dir_volume_path
-            log_host_dir = host_dir + '/log/' + nova_name
-            data_host_dir = host_dir + '/data/' + nova_name
-            other_host_dir = host_dir + '/other/' + nova_name
+            log_host_dir = host_dir + '/log/' + nova_name + '_' + first_ip
+            data_host_dir = host_dir + '/data/' + nova_name + '_' + first_ip
+            other_host_dir = host_dir + '/other/' + nova_name + '_' + first_ip
 
             if os.path.isdir(log_host_dir):
                 __import__('shutil').rmtree(log_host_dir)
@@ -599,7 +601,7 @@ class DockerDriver(driver.ComputeDriver):
         self._stop_container(container_id, instance, 10)
         self.cleanup(context, instance, network_info,
                      block_device_info, destroy_disks)
-        self._destroy_volume_container(instance)
+        self._destroy_volume_container(instance, network_info)
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
