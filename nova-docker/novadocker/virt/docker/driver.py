@@ -404,8 +404,8 @@ class DockerDriver(driver.ComputeDriver):
         self._tag_image_name(image_meta, image_name)
 
         args = self._create_container_args(instance, image_meta, image_inspect_info, network_info, block_device_info)
-        hava_vol = self._create_volume_containers(instance, image_name, image_meta, network_info)
-        if hava_vol:
+        have_vol = self._create_volume_containers(instance, image_name, image_meta, network_info)
+        if have_vol:
             vol_ct_name =  instance['name'] + '_vol'
             args['volumes_from'] = vol_ct_name
 
