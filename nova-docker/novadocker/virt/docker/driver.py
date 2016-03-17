@@ -464,8 +464,8 @@ class DockerDriver(driver.ComputeDriver):
         all_binds = []
 
         if log_volume:
-            log_host_dir = host_dir + '/log/' + nova_name
-            log_bind = log_host_dir + ':' + log_volume + '_' + first_ip
+            log_host_dir = host_dir + '/log/' + nova_name + '_' + first_ip
+            log_bind = log_host_dir + ':' + log_volume
             all_volumes.append(log_volume)
             all_binds.append(log_bind)
         if data_volume:
