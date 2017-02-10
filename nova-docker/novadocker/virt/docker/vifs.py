@@ -139,7 +139,7 @@ class DockerGenericVIFDriver(object):
                                               v2_name, vif['id'], vif['address'],
                                               instance['uuid'])
 
-            if linux_net.device_exists(if_local_name) and not linux_net.device_exists(if_remote_name):
+            if self._container_utils.container_is_running(instance) and linux_net.device_exists(if_local_name) and not linux_net.device_exists(if_remote_name):
                     container_id = self._container_utils.get_container_id(instance)
                     ct_netinfo = utils.execute('ip','netns','exec', container_id, 'ip' , 'link', 'show')[0]
                     if if_local_name not in ct_netinfo and 'eth0' not in ct_netinfo:

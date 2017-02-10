@@ -941,3 +941,17 @@ class ContainerUtils(object):
             if e.response.status_code != 404:
                 raise
         return {}
+
+    def container_is_running(self, name):
+        try:
+            containers = self.docker.containers(all=True, filters={'name': name})
+            for ct in containers:
+                if ct and ct['Names'][0][1:] == name:
+                    if 'Up' in ct['Status']:
+                        return True
+                    else:
+                        return False
+        except errors.APIError as e:
+            if e.response.status_code != 404:
+                raise
+        return {}
