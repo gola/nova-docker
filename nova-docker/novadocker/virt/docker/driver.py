@@ -954,4 +954,3 @@ class ContainerUtils(object):
         except errors.APIError as e:
             if e.response.status_code != 404:
                 raise
-        return {}
