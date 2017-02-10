@@ -110,6 +110,7 @@ class DockerGenericVIFDriver(object):
             undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
 
     def plug_ovs_hybird(self, instance, vif):
+        undo_mgr = utils.UndoManager()
         iface_id = vif['id'][:11]
         if_local_name = 'tap%s' % iface_id
         if_remote_name = 'ns%s' % vif['id'][:11]

@@ -942,7 +942,8 @@ class ContainerUtils(object):
                 raise
         return {}
 
-    def container_is_running(self, name):
+    def container_is_running(self, instance):
+        name = instance['name']
         try:
             containers = self.docker.containers(all=True, filters={'name': name})
             for ct in containers:
