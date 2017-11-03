@@ -137,14 +137,28 @@ class DockerDriver(driver.ComputeDriver):
     def list_instances(self):
         res = []
         for container in self.docker.containers(all=True):
-            res.append(container['Names'][0][1:])
+            try:
+                container_name = container['Names'][0][1:]
+                res.append(container_name)
+            except Exception as e:
+                LOG.warning("Catch a exception in function _exist_container when compare "
+                            "names from containers Names with specific container Name:")
+                LOG.warning(e)
+                LOG.warning(container)
+                continue
         return res
 
-    def _exist_container(self,container_name):
+    def _exist_container(self, container_name):
         for container in self.docker.containers(all=True):
-            if container['Names'][0][1:] == container_name:
-                return True
-
+            try:
+                if container['Names'][0][1:] == container_name:
+                    return True
+            except Exception as e:
+                LOG.warning("Catch a exception in function _exist_container when compare "
+                            "names from containers Names with specific container Name:")
+                LOG.warning(e)
+                LOG.warning(container)
+                continue
         return False
 
     def resize_container_disk(self, instance, disk_info):
@@ -225,8 +239,15 @@ class DockerDriver(driver.ComputeDriver):
         try:
             containers = self.docker.containers(all=True, filters={'name': name})
             for ct in containers:
-                if ct and ct['Names'][0][1:] == name:
-                    return self.docker.inspect_container(ct['Id'])
+                try:
+                    if ct and ct['Names'][0][1:] == name:
+                        return self.docker.inspect_container(ct['Id'])
+                except Exception as e:
+                    LOG.warning("Catch a exception in function _exist_container when compare "
+                                "names from containers Names with specific container Name:")
+                    LOG.warning(e)
+                    LOG.warning(ct)
+                    continue
         except errors.APIError as e:
             if e.response.status_code != 404:
                 raise
