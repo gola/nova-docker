@@ -57,7 +57,7 @@ class CpusetStatsMap(object):
 
     def _push_in_map(self, cpu_list):
         for cpu in cpu_list:
-            if cpu == '0': continue
+            if cpu == '0' or cpu == "": continue
             cpu_key = "cpu" + cpu
             self.cpu_map[cpu_key] = self.cpu_map[cpu_key] + 1
 
