@@ -437,9 +437,10 @@ class DockerDriver(driver.ComputeDriver):
 
         #Workawound instance metadata.
         if 'metadata' in instance:
-            pass
             #FIXME: it's not nice to set all metadata to container env.
-            #args['environment'] = nova_utils.instance_meta(instance)
+            metas = nova_utils.instance_meta(instance)
+            if metas is not None:
+                args['environment'] = metas
 
         dns_list = network.find_dns(network_info)
         if not dns_list:
