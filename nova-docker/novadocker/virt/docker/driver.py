@@ -625,7 +625,7 @@ class DockerDriver(driver.ComputeDriver):
         if not container_id:
             return
         self._stop_container(container_id, instance, 10)
-        self._network_delete(instance,network_info,container_id)
+        self._network_delete(instance, network_info, container_id)
         self._start_container(container_id, instance, network_info)
 
     def power_on(self, context, instance, network_info, block_device_info):
@@ -639,6 +639,7 @@ class DockerDriver(driver.ComputeDriver):
         if not container_id:
             return
         self._stop_container(container_id, instance, 10)
+        self._network_delete(instance, None, container_id)
 
     def pause(self, instance):
         """Pause the specified instance.
