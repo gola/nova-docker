@@ -21,6 +21,7 @@ import os
 import socket
 import time
 import uuid
+import random
 
 from oslo.config import cfg
 from oslo.serialization import jsonutils
@@ -92,8 +93,11 @@ docker_opts = [
                help='Location where obligate for system, default value is -1. '
                     'Support list : device_mapper/overlayfs'),
     cfg.BoolOpt('delete_migration_source',
-               default=False,
-                help='Migration Source Node delete the tar from snapshot dir.')
+                default=False,
+                help='Migration Source Node delete the tar from snapshot dir.'),
+    cfg.IntOpt('max_allow_retry_number',
+               default=5,
+               help='Max allow retry number when catch a docker start error.'),
 ]
 
 CONF.register_opts(docker_opts, 'docker')
@@ -535,15 +539,26 @@ class DockerDriver(driver.ComputeDriver):
         cpuset = self._get_cpu_set(instance)
 
         volumes_from = None
-        vol_ct_name =  instance['name'] + '_vol'
+        vol_ct_name = instance['name'] + '_vol'
         if self._exist_container(vol_ct_name):
             volumes_from = vol_ct_name
 
-        #self.docker.start(container_id)
-        self.docker.update_start(container_id, mem_limit=mem_limit,
-            network_mode=network_mode, privileged=privileged,
-            dns=dns_list, cpu_shares=cpu_shares, cpuset=cpuset,
-            volumes_from=volumes_from)
+        # Default value of max_allow_retry_number is 5
+        max_allow_retry_number = CONF.docker.max_allow_retry_number
+        for tries in range(1, max_allow_retry_number+1):
+            try:
+                # self.docker.start(container_id)
+                self.docker.update_start(container_id, mem_limit=mem_limit,
+                                         network_mode=network_mode, privileged=privileged,
+                                         dns=dns_list, cpu_shares=cpu_shares, cpuset=cpuset,
+                                         volumes_from=volumes_from)
+            except Exception as e:
+                LOG.warning("Catch a exception when docker start, retry count is: %s" % tries)
+                LOG.warning(e)
+                # wait 5 - 10 second and do retry
+                sleep_second = random.randint(5, 10)
+                time.sleep(sleep_second)
+                continue
 
         if not network_info:
             return
