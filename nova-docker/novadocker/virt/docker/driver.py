@@ -573,6 +573,7 @@ class DockerDriver(driver.ComputeDriver):
                                          network_mode=network_mode, privileged=privileged,
                                          dns=dns_list, cpu_shares=cpu_shares, cpuset=cpuset,
                                          volumes_from=volumes_from)
+                break
             except Exception as e:
                 LOG.warning("Catch a exception when docker start, retry count is: %s" % tries)
                 LOG.warning(e)
