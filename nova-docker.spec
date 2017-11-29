@@ -1,6 +1,6 @@
 %define name nova-docker
 %define version 2.3
-%define release 10
+%define release 11
 
 Summary: Docker driver for OpenStack Nova.
 Name: %{name}

@@ -79,5 +79,5 @@ class DockerHTTPClient(client.Client):
             self.load_image(fh)
 
     def get_container_logs(self, container_id):
-        return self.attach(container_id, 1, 1, 0, 1)
+        return self.logs(container_id, 1, 1, 0, 1, tail=100)
 

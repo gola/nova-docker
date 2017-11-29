@@ -700,7 +700,9 @@ class DockerDriver(driver.ComputeDriver):
         container_id = self._get_container_id(instance)
         if not container_id:
             return
-        return self.docker.get_container_logs(container_id)
+        logs = self.docker.get_container_logs(container_id)
+        return "Container logs not available" if not logs \
+            else logs
 
     def snapshot(self, context, instance, image_href, update_task_state):
         container_id = self._get_container_id(instance)
