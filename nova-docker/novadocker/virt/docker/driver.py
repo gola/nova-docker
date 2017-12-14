@@ -22,6 +22,7 @@ import socket
 import time
 import uuid
 import random
+from datetime import datetime, timedelta
 
 from oslo.config import cfg
 from oslo.serialization import jsonutils
@@ -98,6 +99,15 @@ docker_opts = [
     cfg.IntOpt('max_allow_retry_number',
                default=5,
                help='Max allow retry number when catch a docker start error.'),
+    cfg.BoolOpt('docker_log_from_front',
+                default=True,
+                help='Read docker log from front.'),
+    cfg.IntOpt('docker_log_time_span',
+               default=90,
+               help='Number of seconds after container start in log'),
+    cfg.IntOpt('docker_log_tail_length',
+               default=200,
+               help='Lines of tail in container log to read')
 ]
 
 CONF.register_opts(docker_opts, 'docker')
@@ -700,7 +710,57 @@ class DockerDriver(driver.ComputeDriver):
         container_id = self._get_container_id(instance)
         if not container_id:
             return
-        logs = self.docker.get_container_logs(container_id)
+        from_front = CONF.docker.docker_log_from_front
+        if from_front:
+            time_span = CONF.docker.docker_log_time_span
+            logs = self.get_console_output_from_begin(container_id, time_span)
+            return logs
+        else:
+            tail = CONF.docker.docker_log_tail_length
+            logs = self.docker.get_container_logs(container_id, tail=tail)
+            return "Container logs not available" if not logs \
+                else logs
+
+    def get_console_output_from_begin(self, container_id, time_span):
+        logs, result = "", ""
+        result = self.docker.get_container_logs_stream(container_id)
+        start_time = None
+
+        # Get last line's time used to calculte all the time logged
+        # and check if this container got no log
+        container_utils = ContainerUtils()
+        tail_result = self.docker.get_container_logs(container_id, tail=1)
+        if not tail_result:
+            return "Container log not available"
+        end_line_time_str = tail_result.split()[0].split(".")[0]
+        end_time = container_utils.str_to_time(end_line_time_str)
+
+        # Get time of first line in docker log, used to get line which
+        # in some seconds' later
+        for line in result:
+            first_line_time_str = line.split()[0].split(".")[0]
+            try:
+                start_time = container_utils.str_to_time(first_line_time_str)
+            except ValueError as e:
+                LOG.error(e)
+            break
+        if not start_time:
+            return "Container log not available"
+
+        if (end_time - start_time).seconds < time_span:
+            return self.docker.get_container_logs(container_id, tail='all')
+
+        for line in result:
+            current_line_time_str = line.split()[0].split(".")[0]
+            try:
+                current_line_time = container_utils.str_to_time(current_line_time_str)
+            except ValueError as e:
+                LOG.error(e)
+                break
+            if current_line_time - start_time > timedelta(seconds=time_span):
+                break
+            else:
+                logs += line
         return "Container logs not available" if not logs \
             else logs
 
@@ -996,3 +1056,9 @@ class ContainerUtils(object):
         except errors.APIError as e:
             if e.response.status_code != 404:
                 raise
+
+    def str_to_time(self, time_str):
+        try:
+            return datetime.strptime(time_str, "%Y-%m-%dT%H:%M:%S")
+        except ValueError as e:
+            raise ValueError(e)
