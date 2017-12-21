@@ -261,22 +261,39 @@ class DockerGenericVIFDriver(object):
         v2_name = 'qvo%s' % iface_id
         if_bridge = 'qbr%s' % iface_id
         ovs_bridge = vif['network']['bridge']
-        try:
-            #del linux br
-            if linux_net.device_exists(if_bridge):
+        if linux_net.device_exists(if_bridge):
+            try:
                 utils.execute('brctl', 'delif', if_bridge, v1_name, run_as_root=True)
+            except processutils.ProcessExecutionError as e:
+                LOG.error("Failed to delete interface {0} from bridge {1} for instance\
+                  {2}:{3}".format(v1_name, if_bridge, instance.display_name, e))
+            try:
                 utils.execute('ip', 'link', 'set', if_bridge, 'down', run_as_root=True)
+            except processutils.ProcessExecutionError as e:
+                LOG.error("Failed to down bridge {0} for instance {1}:{2}".format(\
+                  if_bridge, instance.display_name, e))
+            try:
                 utils.execute('brctl', 'delbr', if_bridge, run_as_root=True)
-            #del tap veth pair
-            if linux_net.device_exists(if_local_name):
+            except processutils.ProcessExecutionError as e:
+                LOG.error("Failed to delete bridge {0} for instance {1}:{2}".format(
+                  if_bridge, instance.display_name, e))
+        if linux_net.device_exists(if_local_name):
+            try:
                 utils.execute('ip', 'link', 'delete', if_local_name, run_as_root=True)
-           #del qvb veth pair
-            if linux_net.device_exists(v1_name):
+            except processutils.ProcessExecutionError as e:
+                LOG.error("Failed to delete interface {0} for instance {1}:{2}".format(\
+                  if_local_name, instance.display_name, e))
+        if linux_net.device_exists(v1_name):
+            try:
                 utils.execute('ip', 'link', 'delete', v1_name, run_as_root=True)
-            #ip link delete pair1
+            except processutils.ProcessExecutionError as e:
+                LOG.error("Failed to delete interface {0} for instance {1}:{2}".format(\
+                  v1_name, instance.display_name, e))
+        try:
             linux_net.delete_ovs_vif_port(ovs_bridge,v2_name)
-        except processutils.ProcessExecutionError:
-            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+        except processutils.ProcessExecutionError as e:
+            LOG.error("Failed to delete ovs port {0} for instance {1}:{2}".format(\
+                  v2_name, instance.display_name, e)) 
 
     def unplug_ovs_bridge(self, instance, vif):
         """Unplug the VIF by deleting the port from the bridge."""
